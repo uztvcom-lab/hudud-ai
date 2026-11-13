@@ -1,0 +1,7 @@
+name = "hudud-ai"
+pages_build_output_dir = "./public"
+compatibility_date = "2026-11-13"
+
+[[r2_buckets]]
+binding = "HUDUD_DATASET"
+bucket_name = "hudud-dataset"
