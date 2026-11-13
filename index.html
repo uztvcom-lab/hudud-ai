@@ -1,0 +1,4114 @@
+<!DOCTYPE html>
+<html lang="uz" data-theme="light">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Hudud.AI — Zamonaviy Hududiy Tahlil va Saralash Tizimi</title>
+<meta name="description" content="Excel va PDF hisobotlarni tuman, mahalla, ko'cha va oy bo'yicha saralash tizimi">
+<link rel="manifest" href="/manifest.json">
+<meta name="theme-color" content="#eef3ff">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="Hudud.AI">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="application-name" content="Hudud.AI">
+<link rel="icon" type="image/png" sizes="192x192" href="/icons/icon-192.png">
+<link rel="apple-touch-icon" sizes="180x180" href="/icons/apple-touch-icon.png">
+<script>
+// Heavy libraries (ExcelJS ~1 MB, pdf.js ~1.4 MB) are loaded LAZILY: the download starts only when
+// window.__libs is first read (file upload / Excel export) or via window.__loadLibs() after the shared
+// dataset has finished loading. On slow mobile links they used to eat all bandwidth at start-up and the
+// dataset request starved ("Ma'lumotlar bazasi yuklanmoqda..." forever). Falls back to a second CDN on
+// error or after 90 s (a short timeout restarted the download from zero on slow links).
+(function(){
+  var C='https://cdnjs.cloudflare.com/ajax/libs/',J='https://cdn.jsdelivr.net/npm/';
+  function load(urls){return new Promise(function(ok,no){var i=0;(function next(){
+    if(i>=urls.length)return no(new Error("Kutubxonani yuklab bo'lmadi"));
+    var s=document.createElement('script'),done=false,t;s.async=true;s.src=urls[i++];
+    function fin(good){if(done)return;done=true;clearTimeout(t);good?ok():(s.remove(),next())}
+    s.onload=function(){fin(true)};s.onerror=function(){fin(false)};t=setTimeout(function(){fin(false)},90000);
+    document.head.appendChild(s);})()})}
+  var P=null;
+  function start(){
+    if(!P){P=Promise.all([
+      load([C+'exceljs/4.4.0/exceljs.min.js',J+'exceljs@4.4.0/dist/exceljs.min.js']),
+      load([C+'pdf.js/3.11.174/pdf.worker.min.js',J+'pdfjs-dist@3.11.174/build/pdf.worker.min.js']),
+      load([C+'pdf.js/3.11.174/pdf.min.js',J+'pdfjs-dist@3.11.174/build/pdf.min.js'])
+    ]);P.catch(function(){P=null})}
+    return P;
+  }
+  Object.defineProperty(window,'__libs',{configurable:true,get:start});
+  window.__loadLibs=start;
+})();
+</script>
+<style>
+:root {
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+  --bg-main: #060a12;
+  --card-bg: rgba(15, 23, 42, 0.74);
+  --card-hover: rgba(23, 35, 58, 0.88);
+  --card-border: rgba(99, 102, 241, 0.25);
+  --card-border-hover: rgba(6, 182, 212, 0.55);
+  --tx-main: #f8fafc;
+  --tx-muted: #94a3b8;
+  --accent-1: #6366f1;
+  --accent-2: #06b6d4;
+  --accent-3: #8b5cf6;
+  --success-1: #10b981;
+  --success-2: #34d399;
+  --danger: #f43f5e;
+  --input-bg: rgba(11, 18, 33, 0.85);
+  --chip-bg: rgba(30, 41, 59, 0.78);
+  --chip-tx: #e2e8f0;
+  --shadow-lg: 0 22px 55px rgba(0, 0, 0, 0.5), 0 0 35px rgba(99, 102, 241, 0.12);
+  --shadow-glow: 0 10px 30px rgba(6, 182, 212, 0.3);
+  --glass-blur: blur(20px);
+}
+
+html[data-theme="light"] {
+  --bg-main: #eef3ff;
+  --card-bg: rgba(255, 255, 255, 0.82);
+  --card-hover: rgba(255, 255, 255, 0.96);
+  --card-border: rgba(99, 102, 241, 0.22);
+  --card-border-hover: rgba(79, 70, 229, 0.55);
+  --tx-main: #0f172a;
+  --tx-muted: #475569;
+  --accent-1: #4f46e5;
+  --accent-2: #0891b2;
+  --accent-3: #7c3aed;
+  --success-1: #059669;
+  --success-2: #10b981;
+  --danger: #e11d48;
+  --input-bg: rgba(255, 255, 255, 0.95);
+  --chip-bg: rgba(241, 245, 249, 0.92);
+  --chip-tx: #1e293b;
+  --shadow-lg: 0 20px 45px rgba(79, 70, 229, 0.12), 0 4px 16px rgba(15, 23, 42, 0.05);
+  --shadow-glow: 0 10px 25px rgba(79, 70, 229, 0.28);
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: env(safe-area-inset-top, 0px);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background-color: var(--bg-main);
+  background-image: linear-gradient(180deg, rgba(99, 102, 241, 0.07), transparent 420px);
+  background-repeat: no-repeat;
+  color: var(--tx-main);
+  font: 16px/1.5 "Plus Jakarta Sans", "Inter", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  overflow-x: hidden;
+  transition: background-color 0.4s ease, color 0.3s ease;
+}
+
+
+/* Main Wrapper */
+main {
+  position: relative;
+  z-index: 2;
+  width: calc(100% - 24px);
+  max-width: 1220px;
+  margin: 16px auto 48px;
+  padding: 20px 18px 36px;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--card-border);
+  border-radius: 32px;
+  box-shadow: var(--shadow-lg);
+}
+
+/* Top Navigation Bar */
+.nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 22px;
+  margin-bottom: 24px;
+  animation: slideDown 0.6s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes slideDown {
+  from { opacity: 0; transform: translateY(-20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.brand-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+.brand-logo {
+  width: 44px;
+  height: 44px;
+  border-radius: 14px;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  display: grid;
+  place-items: center;
+  font-size: 22px;
+  color: #fff;
+  box-shadow: 0 6px 18px rgba(99, 102, 241, 0.35);
+  animation: none;
+}
+.brand {
+  font-weight: 800;
+  font-size: 20px;
+  letter-spacing: -0.03em;
+  background: linear-gradient(90deg, var(--tx-main), var(--accent-2));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+.brand-sub {
+  display: block;
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--tx-muted);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* Workflow Step Pills in Navbar */
+.navlinks {
+  display: none;
+  align-items: center;
+  gap: 8px;
+}
+.nav-step {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 13px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tx-muted);
+  background: rgba(99, 102, 241, 0.07);
+  border: 1px solid transparent;
+  transition: all 0.3s ease;
+}
+.nav-step.active {
+  color: var(--tx-main);
+  background: rgba(6, 182, 212, 0.16);
+  border-color: rgba(6, 182, 212, 0.45);
+  box-shadow: 0 0 15px rgba(6, 182, 212, 0.2);
+}
+.nav-step .dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+/* Controls: Theme + Sound Equalizer Button */
+.nav-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.ctrl-btn {
+  width: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 9px 15px;
+  border-radius: 999px;
+  background: var(--chip-bg);
+  color: var(--tx-main);
+  border: 1px solid var(--card-border);
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: none;
+  transition: all 0.22s ease;
+  user-select: none;
+}
+.ctrl-btn::before {
+  display: none;
+}
+.ctrl-btn:hover {
+  border-color: var(--accent-2);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-glow);
+}
+
+/* Sound Button & Animated Equalizer Bars */
+#snd {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 16px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  color: #fff;
+  border: 0;
+  font-size: 13.5px;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.32);
+  transition: all 0.22s ease;
+  user-select: none;
+}
+#snd:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 26px rgba(6, 182, 212, 0.4);
+}
+#snd.muted {
+  background: var(--chip-bg);
+  color: var(--tx-muted);
+  box-shadow: none;
+  border: 1px solid var(--card-border);
+}
+
+/* Floating Audio Visualizer Toast */
+#soundWaveToast {
+  position: fixed;
+  bottom: 22px;
+  right: 22px;
+  z-index: 99;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 18px;
+  border-radius: 999px;
+  background: var(--card-bg);
+  border: 1.5px solid var(--accent-2);
+  backdrop-filter: blur(16px);
+  box-shadow: 0 12px 32px rgba(6, 182, 212, 0.35);
+  color: var(--tx-main);
+  font-size: 13px;
+  font-weight: 700;
+  opacity: 0;
+  transform: translateY(20px) scale(0.9);
+  pointer-events: none;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+#soundWaveToast.show {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+
+/* Hero Section */
+.hero {
+  position: relative;
+  text-align: center;
+  padding: 26px 16px 30px;
+  overflow: hidden;
+  animation: fadeUp 0.7s 0.1s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.hero-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 16px;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.14);
+  border: 1px solid rgba(99, 102, 241, 0.35);
+  color: var(--accent-2);
+  font-size: 13px;
+  font-weight: 700;
+  margin-bottom: 16px;
+  box-shadow: 0 0 25px rgba(99, 102, 241, 0.18);
+}
+.hero-badge .spark {
+  display: inline-block;
+  animation: none;
+}
+
+.hero h1 {
+  font-weight: 800;
+  font-size: clamp(26px, 4.8vw, 48px);
+  line-height: 1.12;
+  letter-spacing: -0.03em;
+  max-width: 820px;
+  margin: 0 auto 14px;
+  background: linear-gradient(135deg, var(--tx-main) 20%, var(--accent-2) 65%, var(--accent-3) 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.hero p.s {
+  color: var(--tx-muted);
+  font-size: clamp(15px, 2.2vw, 18px);
+  max-width: 680px;
+  margin: 0 auto 24px;
+}
+
+/* Easy 3-step visual guide for ordinary users */
+.guide-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 12px;
+  max-width: 880px;
+  margin: 0 auto 26px;
+  text-align: left;
+}
+.guide-card {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 16px;
+  border-radius: 18px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  transition: transform 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease;
+}
+.guide-card:hover {
+  transform: translateY(-4px);
+  border-color: var(--accent-2);
+  box-shadow: var(--shadow-glow);
+}
+.guide-icon {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 13px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.22), rgba(6, 182, 212, 0.22));
+  border: 1px solid rgba(6, 182, 212, 0.35);
+  display: grid;
+  place-items: center;
+  font-size: 20px;
+}
+.guide-text strong {
+  display: block;
+  font-size: 14px;
+  color: var(--tx-main);
+}
+.guide-text span {
+  font-size: 12px;
+  color: var(--tx-muted);
+}
+
+.cta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  justify-content: center;
+}
+.pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 14px 28px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  color: #fff;
+  font-weight: 700;
+  font-size: 15px;
+  text-decoration: none;
+  cursor: pointer;
+  box-shadow: 0 12px 28px rgba(99, 102, 241, 0.35);
+  transition: all 0.22s cubic-bezier(0.22, 1, 0.36, 1);
+  border: 0;
+}
+.pill:hover {
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 0 16px 34px rgba(6, 182, 212, 0.45);
+}
+.pill:active {
+  transform: scale(0.97);
+}
+.pill.secondary {
+  background: var(--card-bg);
+  color: var(--tx-main);
+  border: 1px solid var(--card-border);
+  box-shadow: none;
+}
+.pill.secondary:hover {
+  border-color: var(--accent-2);
+  background: var(--card-hover);
+}
+
+/* Bento Grid Layout for Cards */
+#tabC {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 18px;
+  align-items: start;
+}
+
+.card {
+  position: relative;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  border-radius: 26px;
+  padding: 22px;
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1), border-color 0.28s ease, box-shadow 0.28s ease;
+  animation: cardAppear 0.55s cubic-bezier(0.22, 1, 0.36, 1) both;
+  overflow: hidden;
+}
+.card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(500px circle at var(--mx, 50%) var(--my, 0%), rgba(6, 182, 212, 0.1), transparent 45%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+  pointer-events: none;
+}
+.card:hover::before {
+  opacity: 1;
+}
+.card::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, var(--accent-1), var(--accent-2), var(--accent-3));
+  opacity: 0.8;
+}
+.card:hover {
+  border-color: var(--card-border-hover);
+  transform: translateY(-2px);
+}
+@keyframes cardAppear {
+  from { opacity: 0; transform: translateY(22px) scale(0.98); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.step {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  font-size: 13.5px;
+  font-weight: 800;
+  color: var(--accent-2);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  margin-bottom: 14px;
+}
+.step i {
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
+  border-radius: 10px;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  color: #fff;
+  font-style: normal;
+  display: grid;
+  place-items: center;
+  font-size: 14px;
+  font-weight: 800;
+  box-shadow: 0 6px 14px rgba(99, 102, 241, 0.35);
+}
+.step-title-wrap {
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+}
+.step-sub {
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--tx-muted);
+  text-transform: none;
+  letter-spacing: 0;
+  margin-top: 2px;
+}
+.live-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.14);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  color: var(--success-2);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: none;
+}
+.live-tag::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--success-2);
+  box-shadow: 0 0 8px var(--success-2);
+  animation: none;
+}
+
+/* Interactive Drag & Drop Upload Box */
+.upload-zone {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 28px 20px;
+  border: 2px dashed rgba(6, 182, 212, 0.45);
+  border-radius: 22px;
+  background: radial-gradient(circle at center, rgba(6, 182, 212, 0.08), transparent 75%);
+  color: var(--tx-main);
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.28s ease;
+  overflow: hidden;
+}
+.upload-zone:hover, .upload-zone.dragover {
+  border-color: var(--success-2);
+  background: radial-gradient(circle at center, rgba(16, 185, 129, 0.15), transparent 80%);
+  transform: scale(1.01);
+  box-shadow: 0 0 30px rgba(16, 185, 129, 0.2);
+}
+.upload-icon-orb {
+  width: 64px;
+  height: 64px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  color: #fff;
+  box-shadow: 0 12px 26px rgba(6, 182, 212, 0.35);
+  animation: none;
+}
+.upload-main-txt {
+  font-size: 17px;
+  font-weight: 700;
+}
+.upload-sub-txt {
+  font-size: 13px;
+  color: var(--tx-muted);
+}
+
+/* Buttons */
+button, .btn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 15px 22px;
+  border: 0;
+  border-radius: 16px;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  color: #fff;
+  font: 700 16px inherit;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(99, 102, 241, 0.32);
+  transition: transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease, opacity 0.2s ease;
+  overflow: hidden;
+}
+button:hover, .btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 14px 30px rgba(6, 182, 212, 0.4);
+}
+button:active, .btn:active {
+  transform: scale(0.97);
+}
+button::before, .btn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(110deg, transparent 30%, rgba(255, 255, 255, 0.28) 50%, transparent 70%);
+  transform: translateX(-120%);
+  animation: none;
+}
+button:disabled {
+  opacity: 0.75;
+  pointer-events: none;
+}
+button:disabled::after {
+  content: "";
+  width: 16px;
+  height: 16px;
+  margin-left: 8px;
+  display: inline-block;
+  border: 2.5px solid #fff;
+  border-top-color: transparent;
+  border-radius: 50%;
+  animation: spin 0.7s linear infinite;
+}
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+button.mini {
+  width: auto;
+  flex: none;
+  padding: 9px 16px;
+  font-size: 13px;
+  font-weight: 700;
+  border-radius: 12px;
+  background: rgba(99, 102, 241, 0.15);
+  color: var(--accent-2);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  box-shadow: none;
+}
+button.mini:hover {
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  color: #fff;
+  border-color: transparent;
+}
+button.alt {
+  margin-top: 12px;
+  background: rgba(6, 182, 212, 0.1);
+  color: var(--accent-2);
+  border: 1.5px solid var(--accent-2);
+  box-shadow: none;
+}
+button.alt:hover {
+  background: var(--accent-2);
+  color: #fff;
+}
+button.mini::before, button.alt::before {
+  display: none;
+}
+
+#sxsv {
+  background: linear-gradient(135deg, var(--success-1), var(--success-2)) !important;
+  color: #042f2e !important;
+  font-weight: 800;
+  box-shadow: 0 10px 28px rgba(16, 185, 129, 0.4);
+  margin-top: 12px;
+  animation: popIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+@keyframes popIn {
+  from { opacity: 0; transform: scale(0.88); }
+  to { opacity: 1; transform: scale(1); }
+}
+
+input[type=file] {
+  display: none;
+}
+
+/* Ultra-Modern Search Box ("Zamonaviylashgan kreativ izlash tizimi") */
+.row {
+  display: flex;
+  gap: 10px;
+  margin-bottom: 12px;
+  align-items: center;
+}
+.search-box {
+  position: relative;
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+}
+.search-box .search-ico {
+  position: absolute;
+  left: 15px;
+  width: 18px;
+  height: 18px;
+  color: var(--accent-2);
+  pointer-events: none;
+  transition: transform 0.25s ease, color 0.25s ease;
+}
+.search-box .search-clear {
+  position: absolute;
+  right: 10px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, 0.2);
+  color: var(--tx-main);
+  font-size: 12px;
+  font-weight: 700;
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  opacity: 0;
+  transform: scale(0.6);
+  pointer-events: none;
+  transition: all 0.2s ease;
+}
+.search-box.has-val .search-clear {
+  opacity: 1;
+  transform: scale(1);
+  pointer-events: auto;
+}
+.search-box .search-clear:hover {
+  background: var(--danger);
+  color: #fff;
+}
+.search-box input[type=search] {
+  width: 100%;
+  padding: 13px 38px 13px 44px;
+  font: inherit;
+  font-size: 14.5px;
+  font-weight: 500;
+  border: 1.5px solid var(--card-border);
+  border-radius: 16px;
+  background: var(--input-bg);
+  color: var(--tx-main);
+  outline: 0;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.search-box input[type=search]::-webkit-search-cancel-button {
+  -webkit-appearance: none;
+  appearance: none;
+}
+.search-box input[type=search]::placeholder {
+  color: var(--tx-muted);
+}
+.search-box input[type=search]:focus {
+  border-color: var(--accent-2);
+  box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.18), 0 8px 20px rgba(6, 182, 212, 0.12);
+  transform: translateY(-1px);
+}
+.search-box input[type=search]:focus ~ .search-ico {
+  transform: scale(1.18) rotate(-10deg);
+  color: var(--success-2);
+}
+
+/* Interactive Chips */
+.note {
+  font-size: 13px;
+  color: var(--tx-muted);
+  margin-bottom: 10px;
+}
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  max-height: 280px;
+  overflow-y: auto;
+  padding: 4px 2px;
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-1) transparent;
+  isolation: isolate;
+}
+.chips::-webkit-scrollbar {
+  width: 6px;
+}
+.chips::-webkit-scrollbar-thumb {
+  background: rgba(99, 102, 241, 0.4);
+  border-radius: 999px;
+}
+
+label.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  border-radius: 14px;
+  border: 1px solid var(--card-border);
+  background: var(--chip-bg);
+  color: var(--chip-tx);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.2s cubic-bezier(0.22, 1, 0.36, 1), box-shadow 0.2s ease;
+}
+label.chip:hover {
+  border-color: var(--accent-2);
+  transform: translateY(-2px);
+}
+label.chip input {
+  display: none;
+}
+label.chip b {
+  font-size: 11.5px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: rgba(99, 102, 241, 0.18);
+  color: var(--accent-2);
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+label.chip.on {
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  color: #fff;
+  border-color: transparent;
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 8px 18px rgba(99, 102, 241, 0.35);
+}
+label.chip.on b {
+  background: rgba(255, 255, 255, 0.24);
+  color: #fff;
+}
+
+/* File names & Status Messages */
+#sxfn {
+  color: var(--accent-2);
+  font-size: 13.5px;
+  font-weight: 600;
+  margin-top: 12px;
+  word-break: break-all;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(6, 182, 212, 0.1);
+  border: 1px solid rgba(6, 182, 212, 0.25);
+}
+#sxfn:empty {
+  display: none;
+}
+#sxfn:not(:empty)::before {
+  content: "📄 Tanlangan fayl: ";
+  color: var(--tx-muted);
+  font-weight: 500;
+}
+
+#sxmsg {
+  font-size: 14px;
+  margin-top: 14px;
+  min-height: 22px;
+  font-weight: 600;
+  padding: 12px 16px;
+  border-radius: 14px;
+  transition: all 0.25s ease;
+}
+#sxmsg:empty {
+  display: none;
+}
+#sxmsg.ok {
+  color: var(--success-2);
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid rgba(16, 185, 129, 0.35);
+}
+#sxmsg.ok::before {
+  content: "✨ ";
+}
+#sxmsg.er {
+  color: var(--danger);
+  background: rgba(244, 63, 94, 0.12);
+  border: 1px solid rgba(244, 63, 94, 0.35);
+}
+#sxmsg.er::before {
+  content: "⚠️ ";
+}
+
+#sxcnt {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 16px;
+  font-weight: 800;
+  margin-bottom: 14px;
+  padding: 10px 18px;
+  border-radius: 14px;
+  background: rgba(99, 102, 241, 0.14);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  color: var(--accent-2);
+}
+#sxcnt::before {
+  content: "📊";
+}
+
+/* Live Table Preview */
+.lhead {
+  font-weight: 800;
+  font-size: 15px;
+  color: var(--accent-2);
+  margin-bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.lhead::before {
+  content: "⚡";
+}
+.twrap {
+  overflow: auto;
+  max-height: 440px;
+  border: 1px solid var(--card-border);
+  border-radius: 18px;
+  background: var(--input-bg);
+  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.15);
+}
+table.lt {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  min-width: max-content;
+}
+.lt th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  color: #fff;
+  padding: 11px 12px;
+  text-align: left;
+  font-weight: 700;
+  white-space: nowrap;
+}
+.lt td {
+  padding: 9px 12px;
+  border-bottom: 1px solid var(--card-border);
+  max-width: 280px;
+  vertical-align: top;
+  color: var(--tx-main);
+}
+.lt tbody tr {
+  transition: background-color 0.15s ease;
+}
+.lt tbody tr:nth-child(even) td {
+  background: rgba(99, 102, 241, 0.05);
+}
+.lt tbody tr:hover td {
+  background: rgba(6, 182, 212, 0.12);
+}
+button.more {
+  width: 100%;
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.hide {
+  display: none !important;
+}
+
+/* Author Signature & Footer */
+.sign {
+  text-align: center;
+  margin-top: 32px;
+  padding-top: 18px;
+  border-top: 1px solid var(--card-border);
+  animation: fadeUp 0.8s 0.3s both;
+}
+.sign small {
+  display: block;
+  font: 700 11px ui-monospace, "JetBrains Mono", Consolas, monospace;
+  color: var(--tx-muted);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  margin-bottom: 4px;
+}
+.sign svg {
+  width: 270px;
+  max-width: 82%;
+  height: auto;
+  transform: rotate(-3deg);
+  filter: drop-shadow(0 0 10px rgba(6, 182, 212, 0.45));
+  overflow: visible;
+}
+.sign text {
+  font-family: "Segoe Script", "Snell Roundhand", "Lucida Handwriting", "Brush Script MT", cursive;
+  font-style: italic;
+  font-size: 46px;
+  fill: transparent;
+  stroke: var(--accent-2);
+  stroke-width: 1.2;
+  stroke-dasharray: 700;
+  stroke-dashoffset: 700;
+  animation: drawSig 3.2s 0.5s ease forwards, fillSig 0.8s 3.3s forwards;
+}
+.sign path {
+  fill: none;
+  stroke: var(--accent-1);
+  stroke-width: 2.2;
+  stroke-linecap: round;
+  stroke-dasharray: 320;
+  stroke-dashoffset: 320;
+  animation: drawSig 1.2s 3.3s ease forwards;
+}
+@keyframes drawSig {
+  to { stroke-dashoffset: 0; }
+}
+@keyframes fillSig {
+  to { fill: var(--accent-2); stroke-width: 0.4; }
+}
+
+footer {
+  text-align: center;
+  color: var(--tx-muted);
+  font-size: 13.5px;
+  margin-top: 16px;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.shield-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  color: var(--success-2);
+  font-weight: 600;
+  font-size: 12.5px;
+}
+
+/* Responsive Breakpoints */
+@media screen and (min-width: 768px) {
+  main {
+    width: calc(100% - 40px);
+    padding: 26px 30px 44px;
+    border-radius: 36px;
+  }
+  .navlinks {
+    display: flex;
+  }
+  .chips {
+    max-height: 320px;
+  }
+}
+
+@media screen and (min-width: 1100px) {
+  main {
+    width: calc(100% - 64px);
+    padding: 30px 42px 52px;
+    border-radius: 42px;
+  }
+  #tabC {
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+  }
+  #tabC > .card:first-child,
+  #sxc,
+  #sxl,
+  #sxr {
+    grid-column: 1 / -1;
+  }
+}
+
+
+/* Custom Sleek Scrollbars for Table & Chips */
+.twrap {
+  scrollbar-width: thin;
+  scrollbar-color: var(--accent-2) rgba(15, 23, 42, 0.4);
+}
+.twrap::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.twrap::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.35);
+  border-radius: 999px;
+}
+.twrap::-webkit-scrollbar-thumb {
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  border-radius: 999px;
+}
+
+/* Enhanced Mobile & Fullscreen Live Preview Window (#sxl) */
+.preview-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 14px;
+  padding: 8px;
+  border-radius: 16px;
+  background: rgba(99, 102, 241, 0.1);
+  border: 1px solid var(--card-border);
+}
+.preview-tools {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+.pt-btn {
+  width: 100% !important;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 11px 8px !important;
+  font-size: 13.5px !important;
+  font-weight: 700 !important;
+  border-radius: 12px !important;
+  background: var(--chip-bg) !important;
+  color: var(--tx-main) !important;
+  border: 1px solid var(--card-border) !important;
+  box-shadow: none !important;
+  cursor: pointer;
+}
+.pt-btn::before {
+  display: none !important;
+}
+.pt-btn.active {
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2)) !important;
+  color: #fff !important;
+  border-color: transparent !important;
+  box-shadow: 0 6px 16px rgba(6, 182, 212, 0.32) !important;
+}
+
+#sxl .twrap {
+  max-height: 82vh;
+  min-height: 560px;
+  border-radius: 18px;
+  -webkit-overflow-scrolling: touch;
+}
+
+/* Bigger, clearer table typography by default */
+table.lt {
+  font-size: 15px;
+}
+.lt th {
+  padding: 14px 14px;
+  font-size: 14.5px;
+}
+.lt td {
+  padding: 13px 14px;
+  line-height: 1.5;
+  max-width: 350px;
+}
+
+/* Sticky # column so row number is never lost when scrolling horizontally */
+.lt th:first-child,
+.lt td:first-child {
+  position: sticky;
+  left: 0;
+  z-index: 3;
+  width: 42px;
+  min-width: 42px;
+  max-width: 48px;
+  padding-left: 6px;
+  padding-right: 6px;
+  text-align: center;
+  font-weight: 800;
+  background: var(--input-bg);
+  border-right: 1px solid var(--card-border);
+}
+.lt th:first-child {
+  z-index: 4;
+  background: var(--accent-1);
+  color: #fff;
+}
+
+/* Spacious Mobile Card View Mode (#sxl.card-view) - shows all columns clearly without horizontal scroll */
+#sxl.card-view .twrap {
+  background: transparent;
+  border: 0;
+  box-shadow: none;
+  padding: 2px;
+}
+#sxl.card-view table.lt,
+#sxl.card-view .lt tbody {
+  display: block;
+  width: 100% !important;
+  min-width: 0 !important;
+}
+#sxl.card-view .lt thead {
+  display: none;
+}
+#sxl.card-view .lt tbody tr {
+  display: block;
+  margin-bottom: 14px;
+  padding: 14px 16px;
+  border-radius: 18px;
+  background: var(--input-bg);
+  border: 1.5px solid var(--card-border);
+  box-shadow: 0 8px 22px rgba(0, 0, 0, 0.22);
+}
+#sxl.card-view .lt td {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  width: 100% !important;
+  max-width: none !important;
+  padding: 8px 0;
+  border-bottom: 1px solid rgba(99, 102, 241, 0.14);
+  text-align: left;
+  font-size: 15.5px;
+  line-height: 1.48;
+}
+#sxl.card-view .lt td:last-child {
+  border-bottom: 0;
+  padding-bottom: 2px;
+}
+#sxl.card-view .lt td:first-child {
+  position: static;
+  display: inline-flex;
+  flex-direction: row;
+  align-items: center;
+  width: auto !important;
+  max-width: none !important;
+  padding: 4px 12px;
+  margin-bottom: 6px;
+  border-radius: 999px;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  color: #fff;
+  font-size: 13px;
+  font-weight: 800;
+  border: 0;
+}
+#sxl.card-view .lt td:first-child::before {
+  content: "Yozuv #";
+  margin-right: 2px;
+}
+#sxl.card-view .lt td:not(:first-child)::before {
+  content: attr(data-label);
+  font-size: 11.5px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--accent-2);
+}
+#sxl.card-view .lt td:empty {
+  display: none;
+}
+
+/* Extra-large text mode for comfortable mobile reading */
+#sxl.lg-text table.lt,
+#sxl.lg-text.card-view .lt td {
+  font-size: 17.5px !important;
+}
+#sxl.lg-text .lt th {
+  font-size: 16px !important;
+  padding: 15px 16px;
+}
+#sxl.lg-text .lt td {
+  padding: 14px 15px;
+  line-height: 1.55;
+  max-width: 400px;
+}
+#sxl.lg-text.card-view .lt td {
+  padding: 10px 0;
+}
+
+/* Fullscreen Modal Mode for #sxl (true viewport lock) */
+#sxl.fullscreen {
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  right: 0 !important;
+  bottom: 0 !important;
+  z-index: 99999 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  height: 100dvh !important;
+  max-height: none !important;
+  margin: 0 !important;
+  border-radius: 0 !important;
+  border: 0 !important;
+  padding: calc(env(safe-area-inset-top, 10px) + 12px) 10px calc(env(safe-area-inset-bottom, 10px) + 12px) !important;
+  background: var(--bg-main) !important;
+  display: flex !important;
+  flex-direction: column !important;
+  overflow: hidden !important;
+  transform: none !important;
+  animation: none !important;
+}
+#sxl.fullscreen #sxll {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+#sxl.fullscreen .twrap {
+  flex: 1;
+  max-height: none !important;
+  min-height: 0 !important;
+  height: 100% !important;
+}
+
+/* Mobile-specific optimizations: edge-to-edge full width, larger process bar, and huge preview window */
+@media screen and (max-width: 767px) {
+  main {
+    width: 100%;
+    margin: 0 auto 20px;
+    padding: 8px 4px 24px;
+    border-radius: 0;
+    border-left: 0;
+    border-right: 0;
+  }
+  .nav {
+    flex-wrap: wrap;
+    padding: 10px 10px;
+    border-radius: 18px;
+    margin-bottom: 14px;
+  }
+  .navlinks {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 6px;
+    width: 100%;
+    order: 3;
+    margin-top: 8px;
+  }
+  .nav-step {
+    justify-content: center;
+    padding: 9px 6px;
+    font-size: 12.5px;
+    font-weight: 700;
+    text-align: center;
+  }
+  .card {
+    padding: 18px 10px;
+    border-radius: 22px;
+  }
+  #sxl {
+    padding: 18px 6px;
+    border-radius: 22px;
+  }
+  #sxl .step,
+  #sxl .preview-toolbar,
+  #sxl .lhead {
+    padding-left: 6px;
+    padding-right: 6px;
+  }
+  #sxl .step {
+    font-size: 15.5px;
+  }
+  #sxl .step-sub {
+    font-size: 13.5px;
+  }
+  #sxl .lhead {
+    font-size: 17px;
+    margin-bottom: 12px;
+  }
+  #sxl .twrap {
+    max-height: 84vh;
+    min-height: 580px;
+    border-radius: 16px;
+  }
+  table.lt {
+    font-size: 15.5px;
+  }
+  .lt th {
+    padding: 13px 12px;
+    font-size: 14.5px;
+  }
+  .lt td {
+    padding: 14px 12px;
+    font-size: 15.5px;
+    min-width: 140px;
+    max-width: 330px;
+    line-height: 1.5;
+  }
+  button.more {
+    padding: 15px 18px !important;
+    font-size: 15.5px !important;
+    margin-top: 12px;
+  }
+}
+
+
+/* Auto-hide initial intro & upload card once Excel file is loaded */
+body.file-loaded .hero-badge,
+body.file-loaded .hero h1,
+body.file-loaded .hero p.s,
+body.file-loaded .guide-steps,
+body.file-loaded #heroPickBtn,
+body.file-loaded #step1Card {
+  display: none !important;
+}
+body.file-loaded .hero {
+  padding: 4px 8px 14px !important;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+}
+body.file-loaded #sxfn {
+  margin-top: 0;
+  max-width: 100%;
+}
+body.file-loaded #restartBtn {
+  background: rgba(99, 102, 241, 0.16);
+  border-color: var(--accent-2);
+  color: var(--tx-main);
+  box-shadow: 0 6px 20px rgba(6, 182, 212, 0.22);
+}
+
+
+/* PDF-to-Excel Quick Converter & Settings Bar */
+#pdfConvBar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 8px;
+  padding: 12px 16px;
+  border-radius: 18px;
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.14), rgba(6, 182, 212, 0.14));
+  border: 1.5px solid rgba(16, 185, 129, 0.4);
+  width: 100%;
+  max-width: 780px;
+  animation: popIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.pdf-bar-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  flex: 1 1 240px;
+}
+.pdf-bar-ico {
+  width: 38px;
+  height: 38px;
+  border-radius: 11px;
+  background: linear-gradient(135deg, var(--success-1), var(--accent-2));
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+.pdf-bar-txt strong {
+  display: block;
+  font-size: 13.5px;
+  color: var(--tx-main);
+}
+.pdf-bar-txt span {
+  font-size: 12px;
+  color: var(--tx-muted);
+}
+.pdf-bar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+#btnDlRawExcel {
+  width: auto !important;
+  padding: 10px 18px !important;
+  font-size: 13.5px !important;
+  font-weight: 800 !important;
+  border-radius: 12px !important;
+  background: linear-gradient(135deg, var(--success-1), var(--success-2)) !important;
+  color: #042f2e !important;
+  box-shadow: 0 6px 18px rgba(16, 185, 129, 0.35) !important;
+}
+#pdfModeSel {
+  width: auto !important;
+  padding: 9px 14px !important;
+  font-size: 12.5px !important;
+  font-weight: 700 !important;
+  border-radius: 12px !important;
+  background: var(--input-bg) !important;
+  color: var(--tx-main) !important;
+  border: 1px solid var(--card-border) !important;
+  outline: 0;
+  cursor: pointer;
+}
+
+/* Print Layout for PDF Export (#pa) */
+#pa {
+  display: none;
+}
+@media print {
+  @page {
+    size: A4 landscape;
+    margin: .5in .4in .6in .4in;
+    @bottom-center {
+      content: counter(page) " / " counter(pages);
+      font: 9pt Arial;
+    }
+  }
+  html, body {
+    background: #fff !important;
+    background-image: none !important;
+    color: #000 !important;
+  }
+  main, .ambient-bg, #soundWaveToast, footer {
+    display: none !important;
+  }
+  #pa {
+    display: block !important;
+  }
+  #pa table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+    font: 9pt Arial;
+    color: #000;
+  }
+  #pa th {
+    background: #305496 !important;
+    color: #fff !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+    font-weight: 700;
+    text-align: center;
+  }
+  #pa th, #pa td {
+    border: 1px solid #bfbfbf;
+    padding: 2px 3px;
+    word-wrap: break-word;
+    overflow-wrap: anywhere;
+    vertical-align: top;
+  }
+  #pa thead {
+    display: table-header-group;
+  }
+  #pa tr {
+    break-inside: avoid;
+  }
+}
+
+/* ===== Shared Cloud Database: User / Admin modes ===== */
+body:not(.admin-mode) #step1Card,
+body:not(.admin-mode) #sxc,
+body:not(.admin-mode) #heroPickBtn,
+body:not(.admin-mode) .user-hide,
+body:not(.admin-mode) .admin-only {
+  display: none !important;
+}
+body.admin-mode .user-only {
+  display: none !important;
+}
+body.admin-mode.file-loaded #step1Card {
+  display: block !important;
+}
+body.admin-mode #adminBtn {
+  border-color: var(--success-1);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+}
+
+#dbBar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  justify-content: center;
+  margin: 0 auto 18px;
+  animation: fadeUp 0.6s both;
+}
+#dbBar:empty { display: none; }
+
+.db-loader, .db-empty {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  max-width: 100%;
+  padding: 14px 20px;
+  border-radius: 22px;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+}
+.db-loader-txt, .db-empty > div {
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  min-width: 0;
+}
+.db-loader-txt strong, .db-empty strong { font-size: 15.5px; }
+.db-loader-txt span, .db-empty span { font-size: 13px; color: var(--tx-muted); }
+.db-spin {
+  position: relative;
+  width: 44px;
+  height: 44px;
+  flex: none;
+}
+.db-spin span {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  border: 3px solid transparent;
+  border-top-color: var(--accent-2);
+  animation: spin 1.1s linear infinite;
+}
+.db-spin span:nth-child(2) { inset: 6px; border-top-color: var(--accent-1); animation-duration: 1.6s; animation-direction: reverse; }
+.db-spin span:nth-child(3) { inset: 13px; border-top-color: var(--success-2); animation-duration: 0.9s; }
+.db-progress {
+  position: relative;
+  width: 220px;
+  max-width: 100%;
+  height: 5px;
+  margin-top: 6px;
+  border-radius: 99px;
+  background: rgba(99, 102, 241, 0.16);
+  overflow: hidden;
+}
+.db-progress i {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 40%;
+  border-radius: 99px;
+  background: linear-gradient(90deg, var(--accent-1), var(--accent-2), var(--success-2));
+  animation: dbSlide 1.3s ease-in-out infinite;
+}
+@keyframes dbSlide {
+  from { transform: translateX(-110%); }
+  to { transform: translateX(260%); }
+}
+
+.db-files {
+  width: min(1100px, 100%);
+  padding: 16px 18px;
+  border-radius: 22px;
+  background: var(--card-bg);
+  border: 1px solid rgba(16, 185, 129, 0.4);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  animation: popIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.db-files-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-bottom: 12px; }
+.db-files-head strong { font-size: 14.5px; letter-spacing: 0.02em; color: var(--tx-main); }
+.db-file-list { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px; }
+.db-file {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin: 0;
+  padding: 12px 14px;
+  width: 100%;
+  text-align: left;
+  border-radius: 16px;
+  background: var(--chip-bg);
+  border: 1px solid var(--card-border);
+  color: var(--tx-main);
+  box-shadow: none;
+  cursor: pointer;
+  transition: border-color 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+.db-file:hover { border-color: var(--card-border-hover); transform: translateY(-2px); }
+.db-file.on {
+  border-color: var(--success-1);
+  background: rgba(16, 185, 129, 0.12);
+  box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18);
+}
+.db-file.busy { opacity: 0.65; cursor: progress; }
+.db-file::before { display: none; }
+.db-file-ico { font-size: 22px; flex: none; line-height: 1.2; }
+.db-file-txt { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.db-file-txt strong { font-size: 14px; font-weight: 800; word-break: break-word; }
+.db-file-txt span { font-size: 12.5px; color: var(--tx-muted); }
+.db-file.on .db-file-txt span { color: var(--success-2); }
+.db-time {
+  display: inline-flex; align-items: center; gap: 5px; align-self: flex-start;
+  padding: 3px 9px; border-radius: 999px; margin-top: 2px;
+  background: rgba(16, 185, 129, 0.12); border: 1px solid rgba(16, 185, 129, 0.3);
+  color: var(--success-2) !important; font: 700 11.5px ui-monospace, "JetBrains Mono", Consolas, monospace !important;
+  white-space: nowrap;
+}
+.adm-slot-info .db-time, #adminFileInfo .db-time { margin-left: 6px; vertical-align: middle; }
+.db-item { color: var(--tx-muted); }
+.db-sep { color: var(--card-border); font-weight: 800; }
+.db-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 11px;
+  border-radius: 999px;
+  background: rgba(16, 185, 129, 0.15);
+  color: var(--success-2);
+  font: 800 11.5px ui-monospace, "JetBrains Mono", Consolas, monospace;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+.db-live-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--success-2);
+  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+  animation: none;
+}
+.db-empty-ico { font-size: 30px; flex: none; }
+.db-empty button.mini { margin-left: auto; }
+@media (max-width: 640px) { .db-empty { flex-wrap: wrap; } .db-empty button.mini { margin-left: 0; } }
+
+/* Admin tools inside upload card */
+#adminTools {
+  margin-top: 16px;
+  padding: 16px;
+  border-radius: 18px;
+  border: 1px dashed rgba(16, 185, 129, 0.45);
+  background: rgba(16, 185, 129, 0.06);
+  display: grid;
+  gap: 12px;
+}
+.adm-tools-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; }
+.adm-tools-note { font-size: 13px; color: var(--tx-muted); }
+.adm-file {
+  font-size: 13.5px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--chip-bg);
+  border: 1px solid var(--card-border);
+  word-break: break-word;
+}
+.adm-slots { display: grid; gap: 8px; }
+.adm-slot {
+  display: grid;
+  grid-template-columns: auto 1fr auto auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  border-radius: 14px;
+  background: var(--chip-bg);
+  border: 1px solid var(--card-border);
+}
+.adm-slot.target { border-color: var(--success-1); box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.18); }
+.adm-slot-no { font-weight: 800; font-size: 13.5px; white-space: nowrap; }
+.adm-slot-info { font-size: 13px; color: var(--tx-muted); min-width: 0; word-break: break-word; }
+.adm-slot-info b { color: var(--tx-main); }
+.adm-slot button.mini, .adm-slot button.alt { margin: 0; padding: 8px 12px; font-size: 13px; white-space: nowrap; }
+@media (max-width: 640px) {
+  .adm-slot { grid-template-columns: 1fr 1fr; }
+  .adm-slot-no, .adm-slot-info { grid-column: 1 / -1; }
+}
+#btnPublish {
+  background: linear-gradient(135deg, var(--success-1), var(--success-2));
+  color: #042f2e;
+  font-weight: 800;
+  box-shadow: 0 10px 28px rgba(16, 185, 129, 0.4);
+  animation: popIn 0.45s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.adm-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.adm-actions button.alt { margin-top: 0; font-size: 14px; padding: 12px 14px; }
+button.alt.adm-danger { color: var(--danger); border-color: var(--danger); background: rgba(244, 63, 94, 0.08); }
+button.alt.adm-danger:hover { background: var(--danger); color: #fff; }
+@media (max-width: 560px) { .adm-actions { grid-template-columns: 1fr; } }
+#admMsg { font-size: 14px; font-weight: 600; }
+#admMsg:empty { display: none; }
+#admMsg.ok { color: var(--success-2); }
+#admMsg.er { color: var(--danger); }
+
+/* Quick Excel download in live preview toolbar */
+.pt-btn.pt-dl {
+  background: linear-gradient(135deg, var(--success-1), var(--success-2)) !important;
+  color: #042f2e !important;
+  border-color: transparent !important;
+  font-weight: 800 !important;
+}
+
+/* Admin PIN modal (glassmorphism) */
+.adm-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+}
+.adm-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(2, 6, 23, 0.55);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  animation: fadeUp 0.25s both;
+}
+.adm-box {
+  position: relative;
+  width: min(400px, 100%);
+  padding: 30px 26px 24px;
+  border-radius: 28px;
+  text-align: center;
+  background: var(--card-bg);
+  border: 1px solid var(--card-border-hover);
+  box-shadow: var(--shadow-lg), 0 0 60px rgba(6, 182, 212, 0.18);
+  backdrop-filter: var(--glass-blur);
+  -webkit-backdrop-filter: var(--glass-blur);
+  animation: popIn 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+.adm-box h3 { margin: 10px 0 4px; font-size: 21px; }
+.adm-box p { margin: 0 0 20px; color: var(--tx-muted); font-size: 14px; }
+.adm-lock {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto;
+  display: grid;
+  place-items: center;
+  font-size: 30px;
+  border-radius: 20px;
+  background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(6, 182, 212, 0.25));
+  border: 1px solid var(--card-border-hover);
+}
+button.adm-x {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 14px;
+  background: var(--chip-bg);
+  color: var(--tx-muted);
+  border: 1px solid var(--card-border);
+  box-shadow: none;
+}
+button.adm-x::before { display: none; }
+.pin-row { display: flex; justify-content: center; gap: 12px; margin-bottom: 16px; }
+.pin-row.shake { animation: pinShake 0.4s; }
+@keyframes pinShake {
+  20%, 60% { transform: translateX(-8px); }
+  40%, 80% { transform: translateX(8px); }
+}
+.pin {
+  width: 56px;
+  height: 64px;
+  text-align: center;
+  font-family: inherit;
+  font-size: 26px;
+  font-weight: 800;
+  color: var(--tx-main);
+  background: var(--input-bg);
+  border: 1.5px solid var(--card-border);
+  border-radius: 16px;
+  outline: none;
+  transition: border-color 0.2s, box-shadow 0.2s, transform 0.2s;
+  -webkit-text-security: disc;
+}
+.pin:focus { border-color: var(--accent-2); box-shadow: 0 0 0 4px rgba(6, 182, 212, 0.2); transform: translateY(-2px); }
+.pin.filled { border-color: var(--accent-1); }
+#admErr { min-height: 20px; margin-bottom: 12px; font-size: 13.5px; font-weight: 600; color: var(--danger); }
+
+/* "Tanlovni saqlash" toast */
+#selToast {
+  position: fixed; left: 50%; bottom: 24px; z-index: 120;
+  padding: 10px 18px; border-radius: 999px;
+  background: var(--card-bg); color: var(--tx-main);
+  border: 1.5px solid var(--success-1);
+  box-shadow: 0 12px 30px rgba(16, 185, 129, 0.3);
+  backdrop-filter: blur(16px);
+  font-size: 13.5px; font-weight: 700;
+  opacity: 0; transform: translate(-50%, 16px); pointer-events: none;
+  transition: all 0.25s cubic-bezier(0.22, 1, 0.36, 1);
+}
+#selToast.show { opacity: 1; transform: translate(-50%, 0); }
+#selToast.warn { border-color: var(--accent-2); box-shadow: var(--shadow-glow); }
+@media (max-width: 480px) { #saveSelBtn .sel-txt-long { display: none; } }
+@media (min-width: 481px) { #saveSelBtn .sel-txt-short { display: none; } }
+
+/* Mobile touch fixes: instant taps (no double-tap zoom delay) and no hover-only
+   effects on touch screens. iOS Safari swallows the first tap when :hover starts an
+   opacity transition or moves the element (it treats that tap as "show hover"). */
+button, .btn, a, label, select, summary, [role="button"], [role="tab"],
+.pill, .chip, .db-file, .ctrl-btn, .upload-zone, .search-clear, .pin {
+  touch-action: manipulation;
+}
+@media (hover: none), (pointer: coarse) {
+  .card::before { transition: none; }
+  .card:hover::before { opacity: 0; }
+  .card:hover, .guide-card:hover, .ctrl-btn:hover, #snd:hover, .pill:hover,
+  .upload-zone:hover, button:hover, .btn:hover, .db-file:hover, label.chip:hover {
+    transform: none;
+  }
+  label.chip.on:hover { transform: translateY(-2px) scale(1.03); }
+  button:active, .btn:active, .db-file:active, .ctrl-btn:active, .pill:active {
+    transform: scale(0.97);
+  }
+}
+
+/* ===== Filter panel: collapsible on desktop, bottom sheet on mobile ===== */
+.flt-bar, .flt-backdrop { display: none; }
+body.file-loaded .flt-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  grid-column: 1 / -1; position: sticky; top: 8px; z-index: 30;
+  padding: 10px; border-radius: 20px;
+  background: var(--card-bg); border: 1px solid var(--card-border);
+  box-shadow: var(--shadow-lg);
+  backdrop-filter: var(--glass-blur); -webkit-backdrop-filter: var(--glass-blur);
+}
+.flt-toggle {
+  display: inline-flex; align-items: center; gap: 8px; width: auto; margin: 0;
+  padding: 11px 16px; border: 0; border-radius: 14px; cursor: pointer;
+  font: inherit; font-weight: 800; font-size: 14px; color: #fff;
+  background: linear-gradient(135deg, var(--accent-1), var(--accent-2));
+  box-shadow: 0 8px 20px rgba(99, 102, 241, 0.3);
+}
+.flt-caret { transition: transform .25s ease; }
+body.flt-open .flt-caret { transform: rotate(180deg); }
+.flt-sum { display: flex; flex-wrap: wrap; gap: 6px; flex: 1; min-width: 0; }
+.flt-tag {
+  padding: 5px 10px; border-radius: 999px; font-size: 12px; font-weight: 700;
+  background: var(--chip-bg); color: var(--chip-tx); border: 1px solid var(--card-border);
+  white-space: nowrap;
+}
+.flt-tag.on { border-color: var(--success-1); color: var(--success-1); }
+.flt-tag.cnt { background: linear-gradient(135deg, var(--success-1), var(--success-2)); color: #fff; border: 0; }
+.flt-panel { grid-column: 1 / -1; }
+.flt-body { display: grid; grid-template-columns: 1fr; gap: 18px; align-items: start; }
+.flt-sheet-head { display: none; }
+.flt-foot { display: none; }
+body.file-loaded .flt-foot {
+  display: flex; align-items: center; gap: 12px; justify-content: space-between; flex-wrap: wrap;
+  margin-top: 14px; padding: 12px; border-radius: 18px;
+  background: var(--card-bg); border: 1px solid var(--card-border);
+}
+.flt-foot-sum { font-size: 13px; font-weight: 700; color: var(--tx-sub, inherit); }
+.flt-apply {
+  width: auto; margin: 0; padding: 13px 20px; border: 0; border-radius: 14px; cursor: pointer;
+  font: inherit; font-weight: 800; font-size: 15px; color: #fff;
+  background: linear-gradient(135deg, var(--success-1), var(--success-2));
+  box-shadow: 0 10px 24px rgba(16, 185, 129, 0.32);
+}
+@media screen and (min-width: 1100px) {
+  .flt-body { grid-template-columns: 1fr 1fr; gap: 20px; }
+  .flt-body > #sxc { grid-column: 1 / -1; }
+}
+@media screen and (min-width: 761px) {
+  body.file-loaded:not(.flt-open) .flt-panel { display: none; }
+  body.flt-open .flt-panel { animation: fltDown .3s cubic-bezier(.22,1,.36,1) both; }
+}
+@keyframes fltDown { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: none; } }
+
+/* Mobile: bottom sheet */
+@media screen and (max-width: 760px) {
+  body.file-loaded .flt-bar { top: 6px; padding: 8px; gap: 8px; border-radius: 18px; }
+  .flt-toggle { flex: 1 1 100%; justify-content: center; padding: 13px 14px; font-size: 15px; }
+  .flt-sum { justify-content: center; }
+  .flt-panel {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 1001;
+    max-height: 88vh; max-height: 88dvh; display: flex; flex-direction: column;
+    background: var(--bg-main, #0f172a); border-top-left-radius: 24px; border-top-right-radius: 24px;
+    border: 1px solid var(--card-border); border-bottom: 0;
+    box-shadow: 0 -18px 50px rgba(0, 0, 0, 0.45);
+    transform: translateY(105%); visibility: hidden;
+    transition: transform .34s cubic-bezier(.22,1,.36,1), visibility 0s linear .34s;
+  }
+  body.flt-open .flt-panel { transform: none; visibility: visible; transition: transform .34s cubic-bezier(.22,1,.36,1); }
+  body.file-loaded .flt-sheet-head {
+    display: flex; align-items: center; justify-content: space-between; position: relative;
+    padding: 18px 14px 10px; font-size: 16px; border-bottom: 1px solid var(--card-border);
+  }
+  .flt-grab { position: absolute; top: 7px; left: 50%; width: 44px; height: 5px; margin-left: -22px; border-radius: 9px; background: var(--card-border); opacity: .9; }
+  .flt-x {
+    width: 36px; height: 36px; margin: 0; padding: 0; border-radius: 50%; cursor: pointer;
+    border: 1px solid var(--card-border); background: var(--chip-bg); color: var(--chip-tx); font-size: 15px;
+  }
+  .flt-body {
+    display: block; flex: 1 1 auto; min-height: 0;
+    overflow-y: auto; -webkit-overflow-scrolling: touch; overscroll-behavior: contain;
+    padding: 12px 8px 4px;
+  }
+  .flt-body > .card {
+    animation: none; box-shadow: none; transform: none;
+    flex: none; height: auto; min-height: auto; max-height: none;
+    margin: 0 0 12px;
+  }
+  .flt-sheet-head, .flt-foot { flex: none; }
+  body.file-loaded .flt-foot {
+    margin: 0; border-radius: 0; border-left: 0; border-right: 0; border-bottom: 0;
+    padding: 10px 12px calc(10px + env(safe-area-inset-bottom));
+  }
+  .flt-foot-sum { flex: 1 1 100%; text-align: center; font-size: 12.5px; }
+  .flt-apply { flex: 1 1 100%; padding: 15px; font-size: 16px; }
+  body.flt-open .flt-backdrop {
+    display: block; position: fixed; inset: 0; z-index: 1000;
+    background: rgba(2, 6, 23, 0.55); backdrop-filter: blur(3px); -webkit-backdrop-filter: blur(3px);
+    animation: fltFade .25s ease both;
+  }
+  body.flt-open.flt-sheet { overflow: hidden; }
+}
+@keyframes fltFade { from { opacity: 0; } to { opacity: 1; } }
+.flt-toggle, .flt-apply, .flt-x, .flt-backdrop { touch-action: manipulation; }
+
+/* ===== Yengil rejim (performance): blur, cheksiz animatsiyalar va og'ir effektlar o'chirilgan ===== */
+:root, [data-theme], body { --glass-blur: none; }
+*, *::before, *::after { backdrop-filter: none !important; -webkit-backdrop-filter: none !important; }
+.card, .hero { animation-duration: .2s !important; }
+.card:hover::before, .card::before { display: none !important; }
+.click-ripple { display: none !important; }
+#soundWaveToast { box-shadow: 0 6px 16px rgba(0,0,0,.18); transition: opacity .15s ease; }
+.card { box-shadow: 0 4px 14px rgba(15, 23, 42, 0.08); }
+.lt tbody tr:hover td { transition: none; }
+#sxll .lt { contain: content; }
+@media (hover:none), (pointer:coarse) {
+  * { transition-duration: 0s !important; }
+  .flt-panel, body.flt-open .flt-panel { transition: transform .22s ease !important; }
+  .card, .btn, .chip, .pill { box-shadow: none !important; filter: none !important; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; scroll-behavior: auto !important; }
+}
+
+</style>
+</head>
+<body>
+
+
+<!-- Floating Audio Visualizer Toast -->
+<div id="soundWaveToast" aria-hidden="true">
+  <span id="soundToastTxt">Ovozli animatsiya</span>
+</div>
+
+<main>
+  <!-- Top Navigation -->
+  <nav class="nav">
+    <div class="brand-wrap">
+      <div class="brand-logo">⚡</div>
+      <div>
+        <div class="brand">Hudud.AI</div>
+        <span class="brand-sub">Aqlli Excel &amp; PDF Tahlilchi</span>
+      </div>
+    </div>
+
+    <div class="navlinks" id="workflowSteps">
+      <div class="nav-step active" data-step="1"><span class="dot"></span>1. Jadval yuklash</div>
+      <div class="nav-step" data-step="2"><span class="dot"></span>2. Hudud va vaqt</div>
+      <div class="nav-step" data-step="3"><span class="dot"></span>3. Tayyor hisobot</div>
+    </div>
+
+    <div class="nav-controls">
+      <button type="button" class="ctrl-btn" id="saveSelBtn" title="Tanlangan tuman va mahallalarni shu qurilmada saqlash">
+        <span>💾</span>
+        <span class="sel-txt-long">Tanlovni saqlash</span><span class="sel-txt-short">Saqlash</span>
+      </button>
+      <button type="button" class="ctrl-btn" id="themeBtn" title="Kun / Tun ko'rinishini almashtirish">
+        <span id="themeIco">☀️</span>
+        <span id="themeTxt">Kun</span>
+      </button>
+      <button type="button" class="ctrl-btn" id="adminBtn" title="Admin rejimiga kirish">
+        <span id="adminIco">🔐</span>
+        <span id="adminTxt">Admin</span>
+      </button>
+    </div>
+  </nav>
+
+  <!-- Cloud Database Status (shared dataset) -->
+  <div id="dbBar">
+    <div id="dbLoader" class="db-loader" role="status" aria-live="polite">
+      <div class="db-spin"><span></span><span></span><span></span></div>
+      <div class="db-loader-txt">
+        <strong>Ma'lumotlar bazasi yuklanmoqda...</strong>
+        <span>Tumanlar, mahallalar va ko'chalar tayyorlanmoqda</span>
+        <div class="db-progress"><i></i></div>
+      </div>
+    </div>
+    <div id="dbFiles" class="db-files hide">
+      <div class="db-files-head">
+        <span class="db-live"><span class="db-live-dot"></span>Live</span>
+        <strong>📂 MAVJUD HISOBOT FAYLLARI (Kerakli faylni tanlang):</strong>
+      </div>
+      <div id="dbFileList" class="db-file-list" role="tablist"></div>
+    </div>
+    <div id="dbEmpty" class="db-empty hide">
+      <div class="db-empty-ico">📭</div>
+      <div>
+        <strong id="dbEmptyTitle">Hozircha umumiy baza yuklanmagan</strong>
+        <span id="dbEmptySub">Administrator Excel yoki PDF faylni saytga joylagandan so'ng, jadval shu yerda avtomatik paydo bo'ladi.</span>
+      </div>
+      <button type="button" class="mini" id="dbRetry">↻ Qayta tekshirish</button>
+    </div>
+  </div>
+
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="hero-badge user-hide">
+      <span class="spark">✨</span> Oddiy, tushunarli va tezkor hududiy saralash
+    </div>
+    <h1>Excel va PDF hisobotlarni soniyalar ichida hududlar bo'yicha ajrating</h1>
+    <p class="s user-only">Kerakli tuman, mahalla, ko'cha yoki oyni tanlang — saralangan ro'yxatni darhol ko'ring va Excel formatda yuklab oling.</p>
+    <p class="s user-hide">Hech qanday murakkab formulalarsiz: Excel (.xlsx) yoki PDF (.pdf) faylni tashlang, o'zingizga kerakli tuman, mahalla, ko'cha yoki oyni belgilang va tayyor hisobotni yuklab oling.</p>
+
+    <div class="guide-steps user-hide">
+      <div class="guide-card">
+        <div class="guide-icon">📂</div>
+        <div class="guide-text">
+          <strong>1-qadam: Faylni tashlang</strong>
+          <span>1 tadan 10 tagacha Excel (.xlsx) yoki PDF (.pdf) faylni tanlang</span>
+        </div>
+      </div>
+      <div class="guide-card">
+        <div class="guide-icon">🧭</div>
+        <div class="guide-text">
+          <strong>2-qadam: Kerakli joyni belgilang</strong>
+          <span>Tuman, MFY, ko'cha va oyni bir bosishda saralang</span>
+        </div>
+      </div>
+      <div class="guide-card">
+        <div class="guide-icon">🚀</div>
+        <div class="guide-text">
+          <strong>3-qadam: Natijani oling</strong>
+          <span>Tartiblangan yangi Excel yoki PDF faylni saqlang</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="cta user-hide">
+      <label class="pill" for="sxf" id="heroPickBtn">📂 Excel yoki PDF faylni tanlash</label>
+      <button type="button" class="pill secondary" id="restartBtn" style="width:auto">↻ Boshidan boshlash</button>
+    </div>
+    <div id="sxfn"></div>
+    <div id="pdfConvBar" class="hide">
+      <div class="pdf-bar-info">
+        <div class="pdf-bar-ico">📊</div>
+        <div class="pdf-bar-txt">
+          <strong id="pdfConvTitle">PDF fayl tahlil qilinib, Excel jadvalga o'girildi</strong>
+          <span id="pdfConvSub">Pastda hududlar bo'yicha saralashingiz yoki to'liq Excelni darhol yuklab olishingiz mumkin</span>
+        </div>
+      </div>
+      <div class="pdf-bar-actions">
+        <select id="pdfModeSel" title="PDF tahlil rejimi">
+          <option value="auto">⚙️ Rejim: Avto-jadval (Tavsiya etiladi)</option>
+          <option value="lines">⚙️ Rejim: Qatorlar bo'yicha ajratish</option>
+          <option value="raw">⚙️ Rejim: Barcha matn qatorlari</option>
+        </select>
+        <button type="button" id="btnDlRawExcel">📥 To'liq Excelni yuklab olish (.xlsx)</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Interactive Workspace Grid -->
+  <div id="tabC">
+    <!-- Step 1: File Upload -->
+    <div class="card" id="step1Card">
+      <div class="step">
+        <i>1</i>
+        <div class="step-title-wrap">
+          <span>BOSHLANG'ICH FAYLNI YUKLASH (EXCEL / PDF) 📂</span>
+          <span class="step-sub">Kompyuter yoki telefoningizdan Excel (.xlsx) yoki PDF (.pdf) fayllarni tanlang</span>
+        </div>
+      </div>
+      <label class="upload-zone" for="sxf" id="dropZone">
+        <div class="upload-icon-orb">📊</div>
+        <div class="upload-main-txt">Excel yoki PDF fayl(lar)ni shu yerga tashlang yoki bosing</div>
+        <div class="upload-sub-txt">Bir vaqtning o'zida 10 tagacha .xlsx va .pdf faylni birlashtirib tahlil qiladi</div>
+      </label>
+      <input id="sxf" type="file" accept=".xlsx,.xls,.pdf,application/pdf,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" multiple>
+
+      <!-- Admin: publish shared dataset -->
+      <div id="adminTools" class="admin-only">
+        <div class="adm-tools-head">
+          <span class="live-tag">Admin rejimi</span>
+          <span class="adm-tools-note">Har bir o'ringa alohida fayl yuklang — faqat tanlangan o'rin yangilanadi, qolgan fayllar o'z joyida qoladi.</span>
+        </div>
+        <div id="admSlots" class="adm-slots"></div>
+        <div id="adminFileInfo" class="adm-file hide"></div>
+        <button type="button" id="btnPublish" class="hide">☁️ Saytga saqlash</button>
+        <div class="adm-actions">
+          <button type="button" id="btnDelAll" class="alt adm-danger">🗑️ Barcha fayllarni birdaniga o'chirish</button>
+          <button type="button" id="btnExitAdmin" class="alt">🚪 Admin rejimidan chiqish</button>
+        </div>
+        <div id="admMsg"></div>
+      </div>
+    </div>
+
+    <!-- Filter toggle bar (collapsible panel / mobile bottom sheet) -->
+    <div id="fltBar" class="flt-bar">
+      <button type="button" id="fltToggle" class="flt-toggle" aria-controls="fltPanel" aria-expanded="true">
+        <span class="flt-ico">📂</span>
+        <span class="flt-txt">Filtrlarni ochish / yopish</span>
+        <span class="flt-caret" aria-hidden="true">▾</span>
+      </button>
+      <div class="flt-sum" id="fltSum" aria-live="polite"></div>
+    </div>
+    <div id="fltBackdrop" class="flt-backdrop"></div>
+    <div id="fltPanel" class="flt-panel" role="region" aria-label="Filtrlar">
+      <div class="flt-sheet-head">
+        <span class="flt-grab" aria-hidden="true"></span>
+        <strong>🎛️ Filtrlar</strong>
+        <button type="button" id="fltClose" class="flt-x" title="Yopish" aria-label="Yopish">✕</button>
+      </div>
+      <div class="flt-body">
+    <!-- Step 2: Smart Column Recognition -->
+    <div class="card hide" id="sxc">
+      <div class="step">
+        <i>2</i>
+        <div class="step-title-wrap">
+          <span>AQLLI USTUNLAR NAZORATI 🧠</span>
+          <span class="step-sub">Dastur manzil va tuman yozilgan ustunlarni o'zi topdi (kerak bo'lsa o'zgartiring)</span>
+        </div>
+        <span class="live-tag">Avto-aniqlash</span>
+      </div>
+      <div class="chips" id="sxbc"></div>
+    </div>
+
+    <!-- Step 3: District Filter -->
+    <div class="card hide" id="sxd">
+      <div class="step">
+        <i>3</i>
+        <div class="step-title-wrap">
+          <span>TUMANNI TANLANG 🏙️</span>
+          <span class="step-sub">Kerakli tuman ustiga bosing (hech biri tanlanmasa — barcha tumanlar olinadi)</span>
+        </div>
+      </div>
+      <div class="row" style="justify-content:space-between">
+        <span class="note" style="margin:0">Bir yoki bir nechta tumanni belgilash mumkin:</span>
+        <button class="mini" id="sxdb">Barchasini olish</button>
+      </div>
+      <div class="chips" id="sxbd"></div>
+    </div>
+
+    <!-- Step 4: MFY Live Search & Filter -->
+    <div class="card hide" id="sxm">
+      <div class="step">
+        <i>4</i>
+        <div class="step-title-wrap">
+          <span>MAHALLA (M.F.Y) BO'YICHA SARALASH 🏘️</span>
+          <span class="step-sub">Yozishingiz bilan mahallalar ro'yxati jonli ravishda saralanadi</span>
+        </div>
+        <span class="live-tag">Jonli filtr</span>
+      </div>
+      <div class="row">
+        <div class="search-box" id="mfySearchWrap">
+          <input id="sxqm" type="search" placeholder="Mahalla nomini yozib toping...">
+          <svg class="search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <span class="search-clear" data-clear="sxqm" title="Tozalash">✕</span>
+        </div>
+        <button class="mini" id="sxmb">Barchasi</button>
+      </div>
+      <div class="chips" id="sxbm"></div>
+    </div>
+
+    <!-- Step 5: Street Live Search & Filter -->
+    <div class="card hide" id="sxs">
+      <div class="step">
+        <i>5</i>
+        <div class="step-title-wrap">
+          <span>KO'CHA YOKI MAVZENI TOPISH 🛣️</span>
+          <span class="step-sub">Aniq ko'cha yoki mavze nomini tezkor izlash orqali ajratib oling</span>
+        </div>
+        <span class="live-tag">Jonli filtr</span>
+      </div>
+      <div class="row">
+        <div class="search-box" id="stSearchWrap">
+          <input id="sxqs" type="search" placeholder="Ko'cha yoki mavze nomini yozing...">
+          <svg class="search-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+          <span class="search-clear" data-clear="sxqs" title="Tozalash">✕</span>
+        </div>
+        <button class="mini" id="sxsb">Barchasi</button>
+      </div>
+      <div class="chips" id="sxbs"></div>
+    </div>
+
+    <!-- Step 6: Month Filter -->
+    <div class="card hide" id="sxo">
+      <div class="step">
+        <i>🗓️</i>
+        <div class="step-title-wrap">
+          <span>OY VA DAVR KESIMI 📅</span>
+          <span class="step-sub">Faqat ma'lum bir oydagi yozuvlar kerak bo'lsa, shu yerdan belgilang</span>
+        </div>
+      </div>
+      <div class="row" style="justify-content:space-between">
+        <span class="note" style="margin:0">Tanlanmasa — barcha oylar hisobotga qo'shiladi:</span>
+        <button class="mini" id="sxob">Barchasi</button>
+      </div>
+      <div class="chips" id="sxbo"></div>
+    </div>
+
+      </div>
+      <div class="flt-foot">
+        <span class="flt-foot-sum" id="fltFootSum"></span>
+        <button type="button" id="fltApply" class="flt-apply">✅ Tasdiqlash va Yopish</button>
+      </div>
+    </div>
+
+    <!-- Live Preview Table -->
+    <div class="card hide" id="sxl">
+      <div class="step">
+        <i>📋</i>
+        <div class="step-title-wrap">
+          <span>JONLI KO'RISH OYNASI 👀</span>
+          <span class="step-sub">Telefonda qulay o'qish uchun Karta ko'rinishi, Yirik yozuv yoki To'liq ekranni tanlang</span>
+        </div>
+      </div>
+      <div class="preview-toolbar">
+        <div class="preview-tools">
+          <button type="button" class="pt-btn" id="btnCardView" title="Har bir qatorni keng karta shaklida ko'rsatish">📱 Karta ko'rinish</button>
+          <button type="button" class="pt-btn" id="btnLgText" title="Yozuvlarni yanada kattalashtirish">🔍 Yirik yozuv</button>
+          <button type="button" class="pt-btn" id="btnFullScr" title="Jadvalni to'liq ekranda ochish">⛶ To'liq ekran</button>
+        </div>
+        <button type="button" class="pt-btn pt-dl" id="btnQuickXlsx" title="Saralangan ro'yxatni Excel faylga yuklab olish">📥 Excel yuklab olish</button>
+      </div>
+      <div id="sxll"></div>
+    </div>
+
+    <!-- Final Export Actions -->
+    <div class="card hide" id="sxr">
+      <div class="step">
+        <i>6</i>
+        <div class="step-title-wrap">
+          <span>TAYYOR HISOBOTNI YUKLAB OLISH ✅</span>
+          <span class="step-sub">Natijani chiroyli jadval ko'rinishida Excel yoki PDF formatda saqlang</span>
+        </div>
+      </div>
+      <div id="sxcnt"></div>
+      <div>
+        <label class="chip" style="margin-bottom:16px">
+          <input type="checkbox" id="sxsplit">
+          <span>📑 Excel faylda har bir oyni alohida sahifaga (varaqqa) ajratish</span>
+        </label>
+      </div>
+      <button id="sxgo">📥 Tanlangan ma'lumotlarni Excel (.xlsx) formatda yuklab olish</button>
+      <button id="sxsv" class="hide">📥 Tayyor faylni saqlab olish</button>
+      <button id="sxpdf" class="alt">🖨️ PDF formatda chop etish / saqlash</button>
+      <div id="sxmsg"></div>
+    </div>
+  </div>
+
+  <!-- Author Signature -->
+  <div class="sign">
+    <small>Loyiha muallifi</small>
+    <svg viewBox="0 0 300 100" role="img" aria-label="Muallif: Sunnatbek">
+      <text x="10" y="60">Sunnatbek</text>
+      <path d="M8 78 C70 66 150 90 292 66"/>
+    </svg>
+  </div>
+
+  <footer>
+    <span class="shield-badge">🔒 100% Xavfsiz tizim</span>
+    <span>Saralash va hisobot yaratish to'liq o'z qurilmangiz ichida bajariladi — tanlovlaringiz internetga yuborilmaydi.</span>
+  </footer>
+</main>
+
+<!-- Admin PIN Modal -->
+<div id="adminModal" class="adm-modal hide" role="dialog" aria-modal="true" aria-labelledby="admTitle">
+  <div class="adm-backdrop" data-close></div>
+  <div class="adm-box">
+    <button type="button" class="adm-x" data-close title="Yopish">✕</button>
+    <div class="adm-lock">🔐</div>
+    <h3 id="admTitle">Admin rejimiga kirish</h3>
+    <p>Bazani yangilash uchun 4 xonali PIN-kodni kiriting</p>
+    <div class="pin-row" id="pinRow">
+      <input class="pin" type="password" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="PIN 1-raqam">
+      <input class="pin" type="password" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="PIN 2-raqam">
+      <input class="pin" type="password" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="PIN 3-raqam">
+      <input class="pin" type="password" inputmode="numeric" maxlength="1" autocomplete="off" aria-label="PIN 4-raqam">
+    </div>
+    <div id="admErr"></div>
+    <button type="button" id="admGo">🔓 Kirish</button>
+  </div>
+</div>
+
+
+<!-- Custom Confirmation Modal -->
+<div id="confirmModal" class="adm-modal hide" role="dialog" aria-modal="true" aria-labelledby="cfmTitle">
+  <div class="adm-backdrop" data-cfm-cancel></div>
+  <div class="adm-box">
+    <div class="adm-lock">⚠️</div>
+    <h3 id="cfmTitle">Tasdiqlash</h3>
+    <p id="cfmText" style="margin:10px 0 20px"></p>
+    <div class="adm-actions">
+      <button type="button" id="cfmYes" class="alt adm-danger">Ha, tasdiqlayman</button>
+      <button type="button" id="cfmNo" class="alt" data-cfm-cancel>Bekor qilish</button>
+    </div>
+  </div>
+</div>
+
+<div id="pa"></div>
+
+<!-- Core Data & Excel Parsing Logic (Unchanged Internal Mechanics) -->
+<script>
+const $=id=>document.getElementById(id);
+function val(v){
+  if(v==null)return null;
+  if(v instanceof Date)return v;
+  if(typeof v==='object'){
+    if(v.richText)return v.richText.map(t=>t.text).join('');
+    if('result' in v)return v.result;
+    if(v.text!=null)return v.text;
+    return String(v);
+  }
+  return v;
+}
+function dparse(s){
+  const m=String(s).trim().match(/^(\d{1,2})[./](\d{1,2})[./](\d{4})(?:[ T]+(\d{1,2}):(\d{2}))?/);
+  return m?new Date(Date.UTC(+m[3],+m[2]-1,+m[1],+(m[4]||0),+(m[5]||0))):null;
+}
+function bannerOf(vals){
+  const ne=vals.filter(v=>v!=null&&v!=='');
+  if(!ne.length)return 0;
+  const set=new Set(ne.map(v=>String(v).trim()));
+  if(set.size!==1)return 0;
+  const t=[...set][0];
+  return t.length>25?0:mTok(t);
+}
+const CAN=[
+  [/^\s*(?:№|no\.?|n|#|\btr\b|\bt\/r\b)\s*(?:п\s*\/\s*п)?\s*$/i,''],
+  [/^\s*(?:карточ|п\s*\/\s*н|устр|id\b|рақам|raqam)/i,'Карточка'],
+  [/^\s*(?:зафикс|дата|время|sana|vaqt|date)/i,'Зафиксировано'],
+  [/^\s*(?:наимен|объект|obyekt|ташкилот|корхона)/i,'Наименование объекта'],
+  [/^\s*(?:туман|район|tuman|дислок|hudud|ҳудуд)/i,'Туман дислокацияси'],
+  [/^\s*(?:адрес|манзил|manzil|жойлаш|мфй|mfy|махалла)/i,'Адрес'],
+  [/^\s*(?:телефон|тел\b|tel\b|рақам.*тел)/i,'Телефон'],
+  [/^\s*(?:информ|маълумот|malumot|изоҳ|izoh|тавсиф)/i,'Информация'],
+  [/^\s*(?:прибор|ускуна|hisoblagich)/i,'Прибор тури']
+];
+const canon=x=>{for(const [r,n] of CAN)if(r.test(String(x||'').trim()))return n;return String(x||'').trim()};
+const PREF=['Карточка','Зафиксировано','Наименование объекта','Туман дислокацияси','Адрес','Информация','Телефон','Прибор тури'];
+
+function parseSheet(ws){
+  const mc=ws.columnCount;if(!mc||!ws.rowCount)return null;
+  const R=[];ws.eachRow({includeEmpty:false},r=>{const a=[];for(let c=1;c<=mc;c++)a.push(val(r.getCell(c).value));R.push(a)});
+  if(!R.length)return null;
+  let hi=-1;
+  for(let i=0;i<Math.min(R.length,8);i++){
+    const ne=R[i].filter(v=>typeof v==='string'&&v.trim());
+    if(ne.filter(v=>/^\s*(карточка|зафиксировано|наименование.{0,20}|туман.{0,20}|адрес|информация|телефон|прибор.{0,20}|№.{0,6}|п\/н.{0,15}|устр.{0,15}|дата.{0,10}|объект|манзил|manzil|tuman|sana|obyekt)\s*$/i.test(v)).length>=2){hi=i;break}
+  }
+  let order=[],rows=[],cur=0,rawKeys=[],rawLab={};
+  if(hi>=0){
+    const ho=R[hi].map(v=>String(v??'').trim());
+    const h=ho.map(x=>canon(x));
+    const rk=ho.map((x,j)=>h[j]?h[j]:(x?'':'~col'+(j+1)));
+    order=h.filter(Boolean);
+    rk.forEach((k,j)=>{if(k)rawLab[k]=ho[j]});
+    for(const a of R.slice(hi+1)){
+      const b=bannerOf(a);if(b){cur=b;continue}
+      if(!a.some(v=>v!=null&&v!==''))continue;
+      const o={__b:cur,__raw:{}};h.forEach((x,j)=>{if(x)o[x]=a[j]});rk.forEach((k,j)=>{if(k)o.__raw[k]=a[j]});rows.push(o);
+    }
+    rawKeys=rk.filter((k,j)=>k&&(ho[j]||rows.some(o=>{const v=o.__raw[k];return v!=null&&v!==''})));
+  }else{
+    const data=R.filter(a=>!bannerOf(a)&&a.filter(v=>v!=null&&v!=='').length>=1).slice(0,300);
+    if(!data.length)return null;
+    const cnt=f=>Array.from({length:mc},(_,c)=>data.filter(a=>f(a[c])).length);
+    const am=c=>c.indexOf(Math.max(...c));
+    const isD=v=>v instanceof Date||(typeof v==='string'&&!!dparse(v));
+    const isAddr=v=>typeof v==='string'&&(/район|туман|тумани|tuman|мфй|mfy|мфи|р-н|кўча|куча|ko'cha|мавзе|хонадон|уй\b|дом\b/i.test(v)||(window.__detect&&window.__detect(v).length>0));
+    const dc=cnt(isD),ac=cnt(isAddr);
+    let dC=am(dc),aC=am(ac);
+    if(ac[aC]<1){
+      const avgLen=Array.from({length:mc},(_,c)=>data.reduce((s,a)=>s+String(a[c]||'').length,0));
+      aC=am(avgLen);
+    }
+    const nm=[],ix=[];
+    const add=(n,c)=>{if(c>=0&&c<mc&&!ix.includes(c)){nm.push(n);ix.push(c)}};
+    if(dc[dC]>=1){
+      if(dC>0&&dC-1!==aC)add('Карточка',dC-1);
+      add('Зафиксировано',dC);
+      if(dC+1<aC)add('Наименование объекта',dC+1);
+    }else if(aC>0){
+      add('Карточка',0);
+      if(aC>1)add('Наименование объекта',1);
+    }
+    add('Адрес',aC);
+    for(let c=0;c<mc;c++)if(!ix.includes(c))add(c===aC+1?'Телефон':('Ustun '+(c+1)),c);
+    order=nm.slice();
+    for(const a of R){
+      const b=bannerOf(a);if(b){cur=b;continue}
+      if(!a.some(v=>v!=null&&v!==''))continue;
+      if(a.some(v=>typeof v==='string'&&/^\s*(№|N|#)\s*$/.test(v)))continue;
+      const o={__b:cur,__raw:{}};nm.forEach((n,k)=>{o[n]=a[ix[k]];o.__raw[n]=a[ix[k]]});rows.push(o);
+    }
+    rawKeys=nm.slice();nm.forEach(n=>{rawLab[n]=n});
+  }
+  if(!order.length||!rows.length)return null;
+  if(order.includes('Зафиксировано'))rows.forEach(o=>{if(typeof o['Зафиксировано']==='string'){const d=dparse(o['Зафиксировано']);if(d)o['Зафиксировано']=d}});
+  if(!order.includes('Туман дислокацияси')&&order.includes('Адрес')){
+    let k=order.indexOf('Наименование объекта');if(k<0)k=order.indexOf('Зафиксировано');
+    order.splice(k<0?order.length:k+1,0,'Туман дислокацияси');
+    rows.forEach(o=>{const h=window.__detect(o['Адрес']==null?'':String(o['Адрес']));o['Туман дислокацияси']=h.length===1?h[0]:''});
+  }
+  return {order,rows,rawKeys,rawLab};
+}
+
+// Built-in Zero-Dependency Native PDF Stream & CMap Extractor
+async function extractPdfNative(arrayBuffer){
+  const bytes=new Uint8Array(arrayBuffer);
+  const raw=new TextDecoder('latin1').decode(bytes);
+  async function inflate(u8){
+    if(typeof DecompressionStream==='undefined')return new TextDecoder('latin1').decode(u8);
+    for(const fmt of ['deflate','deflate-raw']){
+      try{
+        const ds=new DecompressionStream(fmt);
+        const writer=ds.writable.getWriter();
+        writer.write(u8);writer.close();
+        const out=await new Response(ds.readable).arrayBuffer();
+        return new TextDecoder('latin1').decode(out);
+      }catch(e){}
+    }
+    return new TextDecoder('latin1').decode(u8);
+  }
+  const streamTexts=[];
+  let pos=0;
+  while(true){
+    const sIdx=raw.indexOf('stream',pos);
+    if(sIdx<0)break;
+    if(sIdx>=3&&raw.slice(sIdx-3,sIdx)==='end'){pos=sIdx+6;continue}
+    let start=sIdx+6;
+    if(raw[start]==='\r'&&raw[start+1]==='\n')start+=2;
+    else if(raw[start]==='\n'||raw[start]==='\r')start+=1;
+    const eIdx=raw.indexOf('endstream',start);
+    if(eIdx<0)break;
+    let end=eIdx;
+    if(raw[end-2]==='\r'&&raw[end-1]==='\n')end-=2;
+    else if(raw[end-1]==='\n'||raw[end-1]==='\r')end-=1;
+    const headStr=raw.slice(Math.max(0,sIdx-350),sIdx);
+    const sub=bytes.subarray(start,end);
+    const dec=/FlateDecode/.test(headStr)?await inflate(sub):new TextDecoder('latin1').decode(sub);
+    streamTexts.push({head:headStr,text:dec});
+    pos=eIdx+9;
+  }
+  const cmaps=[];
+  for(const st of streamTexts){
+    const t=st.text;
+    if(!t.includes('beginbfchar')&&!t.includes('beginbfrange'))continue;
+    const cmap=new Map();
+    let codeLen=4;
+    const csr=t.match(/begincodespacerange\s*<([0-9A-Fa-f]+)>/);
+    if(csr)codeLen=csr[1].length;
+    for(const m of t.matchAll(/beginbfchar([\s\S]*?)endbfchar/g)){
+      for(const pair of m[1].matchAll(/<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g)){
+        codeLen=pair[1].length;
+        const k=parseInt(pair[1],16),hexVal=pair[2];
+        let str='';
+        for(let i=0;i<hexVal.length;i+=4)str+=String.fromCharCode(parseInt(hexVal.slice(i,i+4),16));
+        cmap.set(k,str);
+      }
+    }
+    for(const m of t.matchAll(/beginbfrange([\s\S]*?)endbfrange/g)){
+      for(const rng of m[1].matchAll(/<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>\s*<([0-9A-Fa-f]+)>/g)){
+        codeLen=rng[1].length;
+        const s=parseInt(rng[1],16),e=parseInt(rng[2],16);
+        let u=parseInt(rng[3],16);
+        for(let k=s;k<=e;k++)cmap.set(k,String.fromCharCode(u++));
+      }
+    }
+    cmaps.push({map:cmap,codeLen});
+  }
+  function decodeHex(hex,fontIdx){
+    const cm=cmaps[fontIdx]||cmaps[0];
+    const step=cm?cm.codeLen:(hex.length%4===0?4:2);
+    let out='';
+    for(let i=0;i<hex.length;i+=step){
+      const code=parseInt(hex.slice(i,i+step),16);
+      let found=null;
+      if(cm&&cm.map.has(code))found=cm.map.get(code);
+      else{for(const c of cmaps){if(c.codeLen===step&&c.map.has(code)){found=c.map.get(code);break}}}
+      if(found!=null)out+=found;
+      else if(code>=32&&code<127)out+=String.fromCharCode(code);
+    }
+    return out;
+  }
+  function decodeLit(lit){
+    return lit.replace(/\\([0-7]{1,3}|.)/g,(_,esc)=>{
+      if(/^[0-7]+$/.test(esc))return String.fromCharCode(parseInt(esc,8));
+      if(esc==='n')return '\n';if(esc==='r')return '\r';if(esc==='t')return '\t';
+      return esc;
+    });
+  }
+  const pagesItems=[],fontOrder=[];
+  const tokRe=/\/([A-Za-z0-9_.]+)\s+([\d.]+)\s+Tf|([\d.\-]+)\s+([\d.\-]+)\s+([\d.\-]+)\s+([\d.\-]+)\s+([\d.\-]+)\s+([\d.\-]+)\s+Tm|([\d.\-]+)\s+([\d.\-]+)\s+T[dD]|T\*|<([0-9A-Fa-f]+)>\s*Tj|\(([^)]*)\)\s*Tj|\[([\s\S]*?)\]\s*TJ/g;
+  for(const st of streamTexts){
+    const t=st.text;
+    if(!t.includes('BT')||!t.includes('ET')||t.includes('begincmap'))continue;
+    const items=[];
+    let curFontIdx=0,curFontSize=10;
+    for(const bm of t.matchAll(/BT([\s\S]*?)ET/g)){
+      const blk=bm[1];
+      let x=0,y=0,sySign=1,hasPos=false,cellText='',lastSegmentLen=0;
+      const flush=()=>{
+        const clean=cellText.replace(/\s+/g,' ').trim();
+        if(clean)items.push({str:clean,transform:[1,0,0,1,x,y],width:clean.length*(curFontSize*0.52),height:curFontSize,nativeCell:true});
+        cellText='';lastSegmentLen=0;
+      };
+      for(const m of blk.matchAll(tokRe)){
+        if(m[1]!=null){
+          let fi=fontOrder.indexOf(m[1]);
+          if(fi<0){fi=fontOrder.length;fontOrder.push(m[1])}
+          curFontIdx=fi;curFontSize=parseFloat(m[2])||10;
+        }else if(m[3]!=null){
+          if(cellText)flush();
+          sySign=parseFloat(m[6])<0?-1:1;
+          x=parseFloat(m[7]);y=sySign*parseFloat(m[8]);hasPos=true;
+        }else if(m[9]!=null){
+          const tx=parseFloat(m[9]),ty=parseFloat(m[10]);
+          if(!hasPos){x=tx;y=ty;hasPos=true}
+          else if(Math.abs(ty)>0.5){flush();x+=tx;y+=sySign*ty}
+          else{
+            const expectedWidth=Math.max(1,lastSegmentLen)*curFontSize*0.72+18;
+            if(cellText&&tx>expectedWidth){flush();x+=tx}
+          }
+        }else if(m[0]==='T*'){
+          flush();y-=curFontSize*1.2;
+        }else if(m[11]!=null){
+          const s=decodeHex(m[11],curFontIdx);cellText+=s;lastSegmentLen=s.length;
+        }else if(m[12]!=null){
+          const s=decodeLit(m[12]);cellText+=s;lastSegmentLen=s.length;
+        }else if(m[13]!=null){
+          let seg='';
+          for(const sub of m[13].matchAll(/<([0-9A-Fa-f]+)>|\(([^)]*)\)|(-?\d+(?:\.\d+)?)/g)){
+            if(sub[1]!=null)seg+=decodeHex(sub[1],curFontIdx);
+            else if(sub[2]!=null)seg+=decodeLit(sub[2]);
+            else if(sub[3]!=null&&parseFloat(sub[3])<-180)seg+=' ';
+          }
+          cellText+=seg;lastSegmentLen=seg.length;
+        }
+      }
+      flush();
+    }
+    if(items.length)pagesItems.push(items);
+  }
+  return pagesItems;
+}
+
+const H_RE=/^(?:№|#|n|no\.?|\btr\b|\bt\/r\b|карточ|устройств|п\/н|устр|зафикс|дата|время|sana|vaqt|наимен|объект|obyekt|туман|район|дислок|tuman|hudud|адрес|манзил|manzil|информ|телефон|тел\b|tel\b|прибор)/i;
+const H_CONT_RE=/^(?:объекта|устройств[ао]?|аварии|дислокацияси|тури|п\/п|вақти|номи|манзили|рақами)$/i;
+const DATE_RE=/\b\d{1,2}[.\/-]\d{1,2}[.\/-]\d{2,4}(?:[ T]+\d{1,2}:\d{2}(?::\d{2})?)?\b/;
+const PHONE_RE=/\b(?:\+?998[\s\-]?)?\d{2}[\s\-]?\d{3}[\s\-]?\d{2}[\s\-]?\d{2}\b/;
+
+// Parse a single combined text line into structured columns [Карточка, Зафиксировано, Наименование объекта, Туман дислокацияси, Адрес, Телефон]
+function splitCombinedLine(txt){
+  let s=String(txt||'').replace(/\s+/g,' ').trim();
+  if(!s)return null;
+  // Remove leading row number (e.g. "1 ", "12. ")
+  s=s.replace(/^\d{1,4}[.)]?\s+(?=\d|[A-Za-zА-Яа-я])/, '');
+  let dt='',phone='',card='',obj='',addr=s;
+  const dm=s.match(DATE_RE);
+  if(dm){
+    dt=dm[0];
+    const before=s.slice(0,dm.index).trim();
+    const after=s.slice(dm.index+dt.length).trim();
+    if(before&&before.length<=18)card=before;
+    else if(before)obj=before;
+    addr=after||before;
+  }else{
+    const idm=s.match(/^([A-Za-zА-Яа-я0-9\-\/]{3,14})\s+(.*)$/);
+    if(idm&&/\d/.test(idm[1])){card=idm[1];addr=idm[2].trim()}
+  }
+  const pm=addr.match(PHONE_RE);
+  if(pm){phone=pm[0];addr=addr.replace(pm[0],' ').replace(/\s+/g,' ').trim()}
+  // Check if addr has object name before district/address keywords
+  const addrStart=addr.search(/(?:[А-Яа-яA-Za-zʻʼ‘’]+\s+)?(?:тумани|туман|tumani|tuman|район|р-н|шаҳар|shahar|МФЙ|MFY|мфй)/i);
+  if(!obj&&addrStart>4){
+    obj=addr.slice(0,addrStart).replace(/[,\-;]+$/,'').trim();
+    addr=addr.slice(addrStart).trim();
+  }
+  const hits=window.__detect?window.__detect(addr+' '+obj):[];
+  const dist=hits.length===1?hits[0]:'';
+  return [card,dt,obj,dist,addr,phone];
+}
+
+function pdfPagesToMatrix(pagesItems, mode='auto'){
+  const allLines=[];
+  for(const rawItems of pagesItems){
+    const items=[];
+    for(const it of rawItems){
+      const s=String(it.str||'').trim();
+      if(!s)continue;
+      const x=it.transform?it.transform[4]:0;
+      const y=it.transform?it.transform[5]:0;
+      const w=it.width||(s.length*5.0);
+      // Split if a single item contains multiple tab/multi-space separated columns
+      if(!it.nativeCell && /\s{3,}|\t/.test(s)){
+        const parts=s.split(/\s{3,}|\t+/);
+        let curX=x;
+        const stepW=w/parts.length;
+        parts.forEach(p=>{
+          const pt=p.trim();
+          if(pt)items.push({s:pt,x:curX,x1:curX+stepW*0.8,y,nativeCell:false});
+          curX+=stepW;
+        });
+      }else{
+        items.push({s,x,x1:x+w,y,nativeCell:!!it.nativeCell});
+      }
+    }
+    if(!items.length)continue;
+    items.sort((a,b)=>b.y-a.y||a.x-b.x);
+    const pLines=[];
+    for(const it of items){
+      let ln=pLines.find(l=>Math.abs(l.y-it.y)<=4.8);
+      if(!ln){ln={y:it.y,its:[]};pLines.push(ln)}
+      ln.its.push(it);
+    }
+    for(const ln of pLines){
+      ln.its.sort((a,b)=>a.x-b.x);
+      const segs=[];
+      for(const it of ln.its){
+        const prev=segs[segs.length-1];
+        if(prev&&!it.nativeCell&&(it.x-prev.x1)<=4.2){
+          const gap=it.x-prev.x1;
+          prev.s+=(gap<=1.4||prev.s.endsWith(' ')||it.s.startsWith(' '))?it.s:(' '+it.s);
+          prev.x1=Math.max(prev.x1,it.x1);
+        }else{
+          segs.push({s:it.s,x:it.x,x1:it.x1});
+        }
+      }
+      const fullTxt=segs.map(g=>g.s).join(' ').trim();
+      if(/^\d+\s*\/\s*\d+$/.test(fullTxt)||/^страница\s+\d+/i.test(fullTxt))continue;
+      if(segs.length)allLines.push({y:ln.y,segs});
+    }
+  }
+  if(!allLines.length)return [];
+
+  // Mode 'raw': every visual line is exported directly with detected columns
+  if(mode==='raw'){
+    const maxSegs=allLines.reduce((m,l)=>Math.max(m,l.segs.length),0);
+    if(maxSegs>=2){
+      return allLines.map(l=>l.segs.map(g=>g.s));
+    }
+  }
+
+  // Mode 'lines': parse each line into structured 6-column format
+  if(mode==='lines'){
+    const rows=[['Карточка','Зафиксировано','Наименование объекта','Туман дислокацияси','Адрес','Телефон']];
+    for(const ln of allLines){
+      const txt=ln.segs.map(g=>g.s).join(' ').trim();
+      if(!txt||H_RE.test(txt))continue;
+      const parsed=splitCombinedLine(txt);
+      if(parsed)rows.push(parsed);
+    }
+    return rows.length>1?rows:[];
+  }
+
+  let hIdx=-1;
+  for(let i=0;i<Math.min(allLines.length,20);i++){
+    const hits=allLines[i].segs.filter(g=>H_RE.test(g.s)).length;
+    if(hits>=2){hIdx=i;break}
+  }
+
+  let colLeft=[],headerRow=null,startIdx=0;
+  if(hIdx>=0){
+    const hSegs=allLines[hIdx].segs.map(g=>({s:g.s,x:g.x,x1:g.x1}));
+    startIdx=hIdx+1;
+    if(startIdx<allLines.length){
+      const nxt=allLines[startIdx];
+      const nxtTxt=nxt.segs.map(g=>g.s).join(' ');
+      if(!DATE_RE.test(nxtTxt)&&nxt.segs.every(g=>H_CONT_RE.test(g.s)||H_RE.test(g.s))){
+        nxt.segs.forEach(g=>{
+          let best=0,bestD=1e9;
+          hSegs.forEach((h,idx)=>{const d=Math.abs(((h.x+h.x1)/2)-((g.x+g.x1)/2));if(d<bestD){bestD=d;best=idx}});
+          hSegs[best].s+=' '+g.s;
+          hSegs[best].x=Math.min(hSegs[best].x,g.x);
+          hSegs[best].x1=Math.max(hSegs[best].x1,g.x1);
+        });
+        startIdx++;
+      }
+    }
+    headerRow=hSegs.map(g=>g.s);
+    const bodyLines=allLines.slice(startIdx);
+    const fullRows=bodyLines.filter(ln=>ln.segs.length===hSegs.length);
+    if(fullRows.length){
+      colLeft=hSegs.map((_,c)=>Math.min(...fullRows.map(ln=>ln.segs[c].x)));
+    }else{
+      let prevBound=0;
+      colLeft=hSegs.map((hg,idx)=>{
+        const minX=idx===0?0:Math.max(prevBound,hSegs[idx-1].x1-2);
+        const maxX=idx+1<hSegs.length?hSegs[idx+1].x-2:hg.x1+20;
+        const xs=[];
+        bodyLines.forEach(ln=>ln.segs.forEach(g=>{if(g.x>=minX&&g.x<=maxX&&g.x<=hg.x1+8)xs.push(g.x)}));
+        if(!xs.length){prevBound=hg.x1;return hg.x}
+        xs.sort((a,b)=>a-b);
+        const clusters=[];
+        for(const x of xs){
+          let c=clusters.find(cl=>Math.abs(cl.x-x)<=3.5);
+          if(!c){c={x,n:0};clusters.push(c)}
+          c.n++;
+        }
+        clusters.sort((a,b)=>b.n-a.n||a.x-b.x);
+        prevBound=Math.max(hg.x1,clusters[0].x+8);
+        return clusters[0].x;
+      });
+    }
+  }else{
+    const xs=[];
+    allLines.forEach(ln=>ln.segs.forEach(g=>xs.push(g.x)));
+    xs.sort((a,b)=>a-b);
+    const clusters=[];
+    for(const x of xs){
+      let c=clusters.find(cl=>Math.abs(cl.x-x)<=4.5);
+      if(!c){c={x,n:0};clusters.push(c)}
+      c.n++;
+    }
+    const minHits=Math.max(2,Math.floor(allLines.length*0.15));
+    colLeft=clusters.filter(c=>c.n>=minHits).sort((a,b)=>a.x-b.x).map(c=>c.x);
+  }
+
+  const K=colLeft.length;
+  // Check if most lines actually have multiple segments; if almost all lines only have 1 segment, use the smart line splitter!
+  const multiSegLines=allLines.filter(ln=>ln.segs.length>=2).length;
+  if(K>=2 && multiSegLines>=Math.max(1,Math.floor(allLines.length*0.2))){
+    const toCells=ln=>{
+      if(headerRow&&ln.segs.length===K){
+        return ln.segs.map(g=>g.s);
+      }
+      const row=Array(K).fill('');
+      for(const g of ln.segs){
+        let ci=0;
+        for(let c=1;c<K;c++){
+          if(g.x>=colLeft[c]-3.5)ci=c;
+        }
+        row[ci]=row[ci]?(row[ci]+' '+g.s):g.s;
+      }
+      return row;
+    };
+    const isHeaderRepeat=cells=>{
+      if(!headerRow)return false;
+      let same=0,nonEmpty=0;
+      cells.forEach((v,i)=>{
+        if(v){nonEmpty++;if(headerRow[i]&&v.toLowerCase()===headerRow[i].toLowerCase())same++}
+      });
+      return nonEmpty>=2&&same>=Math.ceil(nonEmpty*0.6);
+    };
+    const rawRows=[];
+    for(let i=startIdx;i<allLines.length;i++){
+      const cells=toCells(allLines[i]);
+      if(!cells.some(Boolean))continue;
+      if(isHeaderRepeat(cells))continue;
+      rawRows.push(cells);
+    }
+    const dateCol=headerRow?headerRow.findIndex(h=>/зафикс|дата|время|sana|vaqt|date/i.test(h)):-1;
+    const idCol=headerRow?headerRow.findIndex(h=>/карточ|устройств|п\/н|устр/i.test(h)):0;
+    const numCol=headerRow?headerRow.findIndex(h=>/^\s*(?:№|#|n|no\.?)/i.test(h)):-1;
+
+    const isNewRecord=cells=>{
+      if(numCol>=0&&/^\d+$/.test(cells[numCol]))return true;
+      if(dateCol>=0&&DATE_RE.test(cells[dateCol]))return true;
+      if(idCol>=0&&cells[idCol]&&(dateCol<0||!cells[dateCol]||DATE_RE.test(cells[dateCol]))&&cells.filter(Boolean).length>=2)return true;
+      if(cells.some(c=>DATE_RE.test(c)))return true;
+      if(dateCol<0&&idCol<0&&cells.filter(Boolean).length>=Math.max(2,Math.ceil(K*0.6)))return true;
+      return false;
+    };
+
+    const merged=[];
+    for(const cells of rawRows){
+      if(!merged.length||isNewRecord(cells)){
+        merged.push(cells);
+      }else{
+        const prev=merged[merged.length-1];
+        for(let c=0;c<K;c++){
+          if(!cells[c])continue;
+          if(!prev[c])prev[c]=cells[c];
+          else if(prev[c].endsWith('-'))prev[c]+=cells[c];
+          else prev[c]+=' '+cells[c];
+        }
+      }
+    }
+    if(merged.length)return headerRow?[headerRow,...merged]:merged;
+  }
+
+  // Fallback for 1-column / line-based PDFs: split every line into structured columns
+  const fbRows=[['Карточка','Зафиксировано','Наименование объекта','Туман дислокацияси','Адрес','Телефон']];
+  for(const ln of allLines){
+    const txt=ln.segs.map(g=>g.s).join(' ').trim();
+    if(!txt||H_RE.test(txt))continue;
+    const parsed=splitCombinedLine(txt);
+    if(parsed)fbRows.push(parsed);
+  }
+  return fbRows.length>1?fbRows:[];
+}
+
+// Normalize extracted PDF matrix so it ALWAYS has valid Excel headers ('Карточка','Зафиксировано','Наименование объекта','Адрес', etc.)
+function normalizeMatrixForExcel(R){
+  if(!R||!R.length)return [];
+  const mc=R.reduce((m,r)=>Math.max(m,r.length),0);
+  if(!mc)return [];
+  const normR=R.map(r=>{const a=r.slice();while(a.length<mc)a.push('');return a});
+
+  const r0=normR[0];
+  const r0Hits=r0.filter(v=>H_RE.test(String(v||'').trim())).length;
+  const r0HasDate=r0.some(v=>DATE_RE.test(String(v||'')));
+  let hasHeader=(r0Hits>=2)||(!r0HasDate&&normR.length>1&&r0Hits>=1);
+
+  let headers=[],dataRows=[];
+  if(hasHeader){
+    headers=r0.map(v=>canon(v)||String(v||'').trim());
+    dataRows=normR.slice(1);
+  }else{
+    dataRows=normR;
+    headers=Array(mc).fill('');
+  }
+
+  if(!dataRows.length)return [];
+
+  const isAddrText=v=>typeof v==='string'&&(/район|туман|тумани|tuman|мфй|mfy|мфи|р-н|кўча|куча|ko'cha|мавзе|хонадон|уй\b|дом\b/i.test(v)||(window.__detect&&window.__detect(v).length>0));
+  const isDateText=v=>typeof v==='string'&&DATE_RE.test(v);
+
+  if(!headers.some(h=>canon(h)==='Адрес')){
+    let bestC=-1,bestScore=-1;
+    for(let c=0;c<mc;c++){
+      if(canon(headers[c])==='Туман дислокацияси'&&mc>1)continue;
+      const addrCnt=dataRows.filter(r=>isAddrText(r[c])).length;
+      const avgLen=dataRows.reduce((s,r)=>s+String(r[c]||'').length,0)/dataRows.length;
+      const score=addrCnt*25+avgLen;
+      if(score>bestScore){bestScore=score;bestC=c}
+    }
+    if(bestC>=0)headers[bestC]='Адрес';
+  }
+
+  if(!headers.some(h=>canon(h)==='Зафиксировано')){
+    let dC=-1,bestD=0;
+    for(let c=0;c<mc;c++){
+      if(headers[c]==='Адрес')continue;
+      const cnt=dataRows.filter(r=>isDateText(r[c])).length;
+      if(cnt>bestD){bestD=cnt;dC=c}
+    }
+    if(dC>=0)headers[dC]='Зафиксировано';
+  }
+
+  const fallbacks=['Карточка','Наименование объекта','Информация','Телефон'];
+  let fbIdx=0;
+  for(let c=0;c<mc;c++){
+    if(!headers[c]){
+      const allSeq=dataRows.slice(0,20).every((r,idx)=>String(r[c]||'').trim()===String(idx+1));
+      if(c===0&&allSeq&&mc>2){headers[c]='№ п/п';continue}
+      headers[c]=fallbacks[fbIdx++]||('Ustun '+(c+1));
+    }
+  }
+
+  return [headers,...dataRows];
+}
+
+// Extract pages via Mozilla PDF.js with proper Viewport transform (handles rotated/landscape/cropped PDFs & CID fonts)
+async function extractViaPdfJs(buf){
+  if(!window.pdfjsLib)return [];
+  const savedWorker=window.Worker;
+  try{
+    if(window.pdfjsWorker)window.Worker=undefined;
+    const doc=await pdfjsLib.getDocument({data:new Uint8Array(buf),disableWorker:true,isEvalSupported:false}).promise;
+    const pItems=[];
+    for(let p=1;p<=doc.numPages;p++){
+      const page=await doc.getPage(p);
+      const vp=page.getViewport({scale:1.0});
+      const tc=await page.getTextContent();
+      const mapped=(tc.items||[]).map(it=>{
+        if(!it.transform)return it;
+        const tx=(pdfjsLib.Util&&pdfjsLib.Util.transform)?pdfjsLib.Util.transform(vp.transform,it.transform):it.transform;
+        return {
+          str:it.str,
+          transform:[1,0,0,1,tx[4],vp.height-tx[5]],
+          width:it.width||0,
+          height:it.height||10,
+          nativeCell:false
+        };
+      });
+      pItems.push(mapped);
+    }
+    return pItems;
+  }finally{
+    window.Worker=savedWorker;
+  }
+}
+
+// Score how many valid rows and district/address matches a matrix has
+function scoreMatrix(R){
+  if(!R||R.length<2)return 0;
+  let score=R.length*2;
+  for(const row of R.slice(1,100)){
+    const txt=row.join(' ');
+    if(window.__detect&&window.__detect(txt).length)score+=15;
+    if(DATE_RE.test(txt))score+=5;
+    if(/туман|tuman|мфй|mfy|кўча|куча|ko'cha/i.test(txt))score+=8;
+  }
+  return score;
+}
+
+window.__lastPdfMatrix=null;
+window.__lastPdfName='PDF_Jadval.xlsx';
+
+async function convertPdfToExcelWorkbook(f){
+  const buf=await f.arrayBuffer();
+  const mode=($('pdfModeSel')&&$('pdfModeSel').value)||'auto';
+
+  let R_pdfjs=[],R_native=[];
+  // 1. Run PDF.js extractor (supports all PDF encodings, predictors, CID fonts, rotated pages)
+  try{
+    const p1=await extractViaPdfJs(buf);
+    if(p1.length)R_pdfjs=pdfPagesToMatrix(p1,mode);
+  }catch(e){}
+
+  // 2. Also run built-in native stream extractor (works 100% offline)
+  try{
+    const p2=await extractPdfNative(buf);
+    if(p2.length)R_native=pdfPagesToMatrix(p2,mode);
+  }catch(e){}
+
+  // Pick whichever engine extracted higher-quality structured rows
+  const R=(scoreMatrix(R_pdfjs)>=scoreMatrix(R_native)&&R_pdfjs.length>=2)?R_pdfjs:(R_native.length?R_native:R_pdfjs);
+  const excelMatrix=normalizeMatrixForExcel(R);
+  if(!excelMatrix.length)throw new Error("PDF fayl ichidan matn qatorlari topilmadi (fayl skanerlangan rasm bo'lishi mumkin).");
+
+  window.__lastPdfMatrix=excelMatrix;
+  window.__lastPdfName=f.name.replace(/\.pdf$/i,'')+'_Excel.xlsx';
+
+  if(typeof ExcelJS!=='undefined'&&ExcelJS.Workbook){
+    const wb=new ExcelJS.Workbook();
+    const hd=excelMatrix[0],rs=excelMatrix.slice(1);
+    const wd=hd.map((h,i)=>{let m=String(h).length;rs.slice(0,200).forEach(r=>{const v=r[i];if(v!=null)m=Math.max(m,Math.min(String(v).length,60))});return Math.min(45,Math.max(10,Math.ceil(m*.9)+2))});
+    addSheet(wb,'PDF_Excel',hd,rs,wd);
+    window.__convertedPdfWb=wb;
+    return wb;
+  }
+  const mc=excelMatrix[0].length;
+  return {
+    worksheets:[{
+      name:'PDF_Excel',
+      state:'visible',
+      columnCount:mc,
+      rowCount:excelMatrix.length,
+      eachRow:(_,fn)=>excelMatrix.forEach((r,idx)=>fn({getCell:c=>({value:r[c-1]})},idx+1))
+    }]
+  };
+}
+
+async function readMany(files){
+  files=[...files].slice(0,10);
+  let head=null;const objs=[],src=[],skipped=[],seen=new Set(),rawKeys=[],rawLab={};let dup=0,pdfConverted=0;
+  for(const f of files){
+    const isPdf=/\.pdf$/i.test(f.name)||f.type==='application/pdf';
+    let wb;
+    if(isPdf){
+      wb=await convertPdfToExcelWorkbook(f);
+      pdfConverted++;
+    }else{
+      wb=new ExcelJS.Workbook();await wb.xlsx.load(await f.arrayBuffer());
+    }
+    for(const ws of [wb.worksheets.find(w=>w.state!=='hidden'&&w.state!=='veryHidden')||wb.worksheets[0]]){
+      if(!ws)continue;const P=parseSheet(ws);if(!P)continue;
+      P.rawKeys.forEach(k=>{if(!rawKeys.includes(k)){rawKeys.push(k);rawLab[k]=P.rawLab[k]}});
+      if(!head)head=P.order.slice();else P.order.forEach(x=>{if(!head.includes(x))head.push(x)});
+      if(head.some(x=>!P.order.includes(x)))skipped.push(f.name+' / '+ws.name);
+      for(const o of P.rows){
+        if(o['Карточка']!=null&&o['Карточка']!==''){
+          const d=o['Зафиксировано'];const key=o['Карточка']+'|'+(d instanceof Date?d.getTime():d);
+          if(seen.has(key)){dup++;continue}seen.add(key);
+        }
+        objs.push(o);src.push((o.__b?UZM[o.__b-1]+' ':'')+ws.name+' '+f.name);
+      }
+    }
+  }
+  head=(head||[]).map((x,i)=>[x,i]).sort((a,b)=>{const p=n=>{const k=PREF.indexOf(n);return k<0?99:k};return p(a[0])-p(b[0])||a[1]-b[1]}).map(x=>x[0]);
+  return {head,rows:objs.map(o=>head.map(x=>o[x]==null?null:o[x])),rawHead:rawKeys.map(k=>rawLab[k]),rawRows:objs.map(o=>rawKeys.map(k=>o.__raw[k]==null?null:o.__raw[k])),src,skipped,dup,pdfConverted};
+}
+const LS={};
+function renderList(id,hd,rs,reset=true){
+  const box=document.getElementById(id);if(reset)LS[id]=50;const n=Math.min(LS[id],rs.length);
+  let h='<div class="lhead">Saralangan ro\'yxat: '+rs.length+' ta yozuv</div><div class="twrap"><table class="lt"><thead><tr><th>#</th>'+hd.map(x=>'<th>'+esc(x)+'</th>').join('')+'</tr></thead><tbody>';
+  for(let i=0;i<n;i++)h+='<tr><td>'+(i+1)+'</td>'+rs[i].map(v=>'<td>'+(v==null?'':esc(v instanceof Date?fmt(v):v))+'</td>').join('')+'</tr>';
+  h+='</tbody></table></div>';
+  if(n<rs.length)h+='<button class="mini more">Yana 50 ta qator ko\'rsatish ('+n+' / '+rs.length+')</button>';
+  box.innerHTML=h;
+  const b=box.querySelector('.more');if(b)b.onclick=()=>{LS[id]+=50;renderList(id,hd,rs,false)};
+}
+const MAP={'ғ':'г','ў':'у','қ':'к','ҳ':'х','ё':'е','ө':'у','ү':'у','ң':'н','ъ':'','ь':'','’':'',"'":'','`':'','ʼ':'','ʻ':''};
+const norm=s=>String(s).toLowerCase().replace(/[ғўқҳёөүңъь’'`ʼʻ]/g,c=>MAP[c]).replace(/[^a-zа-я0-9]+/g,' ').trim();
+const PRE=/^.*?(?:тумани|туман|тум|района|район|р-н|р-он)(?=[\s,.]|$)[\s,.]*/iu;
+const JUNK=/(?:\d+\s*-?\s*ИИБ|ГОМ\s*\d+|н\/п)[\s,.]*/giu;
+const trim=s=>s.replace(/^(?:ул|улица)[\s.]+/iu,'').replace(/^[\s,.\-]+|[\s,.\-]+$/g,'').replace(/\s+/g,' ');
+function street(r){
+  r=r.replace(/^(?:массив|мавзе)(?=[\s,.]|$)[\s,.]*/iu,'');
+  if(/^\d/.test(r))return '';
+  const m=r.match(/^(.*?)[\s,]*(кўчаси|кучаси|кочаси|кўча|куча|коча|мавзеси|мавзе)(?=[\s,.]|$)/iu);
+  let s;
+  if(m&&m[1]){s=m[1];if(/^мавзе/i.test(m[2]))s+=' мавзеси'}
+  else s=r.split(/[\s,]+(?=\d|(?:дом|уй|кв)(?:[\s,.]|$)|д(?:[\s.]|$))/iu)[0];
+  return trim(s);
+}
+function parse(a){
+  const t=String(a||'').replace(/\([^)]*\)?/g,' ').replace(/\s+/g,' ').trim();
+  const m=t.match(/^(.*?)[\s,]*(?:МФЙ|МФИ)(?=[\s,.]|$)[\s,.]*(.*)$/iu);
+  if(m)return {mfy:trim(m[1].replace(PRE,'').replace(JUNK,'')),st:street(trim(m[2]))};
+  return {mfy:'',st:street(trim(t.replace(PRE,'').replace(JUNK,'')))};
+}
+const NA='Aniqlanmadi';
+const nk=s=>norm(s).replace(/ /g,'');
+const kM=o=>nk(o.m.mfy)||'~',kS=o=>nk(o.m.st)||'~';
+function groups(items,kf,lf){
+  const g=new Map();
+  items.forEach(o=>{const k=kf(o),raw=lf(o)||NA;if(!g.has(k))g.set(k,{n:0,l:{}});const e=g.get(k);e.n++;e.l[raw]=(e.l[raw]||0)+1});
+  return [...g].map(([k,e])=>({k,n:e.n,label:Object.entries(e.l).sort((a,b)=>b[1]-a[1])[0][0]}))
+    .sort((a,b)=>(a.k==='~')-(b.k==='~')||a.label.localeCompare(b.label));
+}
+function chips(box,list,set,after){
+  box.innerHTML='';
+  list.forEach(g=>{
+    const l=document.createElement('label');l.className='chip'+(set.has(g.k)?' on':'');
+    l.innerHTML='<input type="checkbox"><span></span><b></b>';
+    l.children[1].textContent=g.label;l.children[2].textContent=g.n;
+    const cb=l.firstChild;cb.checked=set.has(g.k);
+    cb.onchange=()=>{cb.checked?set.add(g.k):set.delete(g.k);l.classList.toggle('on',cb.checked);after()};
+    box.appendChild(l)});
+  if(!list.length)box.textContent='Mos yozuv topilmadi';
+}
+const p2=n=>String(n).padStart(2,'0');
+function fmt(d){return p2(d.getUTCDate())+'.'+p2(d.getUTCMonth()+1)+'.'+d.getUTCFullYear()+' '+p2(d.getUTCHours())+':'+p2(d.getUTCMinutes())}
+const esc=s=>String(s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+</script>
+
+<!-- Motion Animations (sound removed) -->
+<script>
+(()=>{
+let toastTimer=null;
+const $=id=>document.getElementById(id),toast=$('soundWaveToast'),toastTxt=$('soundToastTxt');
+
+function showAudioPulse(label){
+  if(toast&&label){
+    toastTxt.textContent=label;
+    toast.classList.add('show');
+  }
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>{
+    if(toast)toast.classList.remove('show');
+  },650);
+}
+
+// Ovoz butunlay o'chirildi — faqat vizual effektlar qoldi
+const clickSound=(label)=>{if(label)showAudioPulse(label)};
+const searchTick=()=>showAudioPulse('Jonli qidiruv...');
+const chime=(label='Fayl yuklandi!')=>showAudioPulse(label);
+const errSound=()=>showAudioPulse('Diqqat!');
+
+document.addEventListener('click',e=>{
+  const interactive=e.target.closest('button,label.btn,label.chip,label.upload-zone,.pill,.search-clear');
+  if(false&&interactive&&e.clientX&&e.clientY){ // ripple o'chirildi (yengil rejim)
+    const r=document.createElement('div');
+    r.className='click-ripple';
+    r.style.left=e.clientX+'px';
+    r.style.top=e.clientY+'px';
+    document.body.appendChild(r);
+    setTimeout(()=>r.remove(),600);
+  }
+  const chip=e.target.closest('label.chip');
+  if(chip){clickSound('Filtr yangilandi');return}
+  const btn=e.target.closest('button,label.btn,label.upload-zone,.pill,.search-clear');
+  if(btn)clickSound('Tanlandi');
+},true);
+
+// Card spotlight effect following mouse cursor
+if(matchMedia('(hover:hover) and (pointer:fine)').matches)document.addEventListener('pointermove',e=>{
+  const card=e.target.closest&&e.target.closest('.card');
+  if(!card)return;
+  const rect=card.getBoundingClientRect();
+  card.style.setProperty('--mx',(e.clientX-rect.left)+'px');
+  card.style.setProperty('--my',(e.clientY-rect.top)+'px');
+});
+
+['sxqm','sxqs'].forEach(id=>{
+  const el=$(id);
+  if(el){
+    el.addEventListener('input',()=>{
+      searchTick();
+      const wrap=el.closest('.search-box');
+      if(wrap)wrap.classList.toggle('has-val',!!el.value);
+    });
+  }
+});
+
+document.querySelectorAll('.search-clear').forEach(btn=>{
+  btn.addEventListener('click',()=>{
+    const target=$(btn.dataset.clear);
+    if(target){
+      target.value='';
+      target.closest('.search-box').classList.remove('has-val');
+      target.dispatchEvent(new Event('input',{bubbles:true}));
+      target.focus();
+    }
+  });
+});
+
+$('sxf').addEventListener('change',()=>{chime("Fayl o'qilmoqda...")});
+
+new MutationObserver(()=>{
+  const m=$('sxmsg');
+  if(m.classList.contains('er'))errSound();
+  else if(m.classList.contains('ok')&&m.textContent.indexOf('tayyor')>-1)chime('Hisobot tayyor!');
+}).observe($('sxmsg'),{childList:true,characterData:true,subtree:true});
+
+// Preview Window Interactive Controls (Mobile Card View, Large Text, Fullscreen) + data-label sync
+const sxlCard=$('sxl'),btnCard=$('btnCardView'),btnLg=$('btnLgText'),btnFs=$('btnFullScr'),sxllBox=$('sxll');
+function syncTableLabels(){
+  if(!sxllBox)return;
+  const ths=[...sxllBox.querySelectorAll('.lt thead th')].map(th=>th.textContent.trim());
+  sxllBox.querySelectorAll('.lt tbody tr').forEach(tr=>{
+    [...tr.children].forEach((td,idx)=>{
+      if(idx>0&&ths[idx])td.setAttribute('data-label',ths[idx]);
+    });
+  });
+}
+if(sxllBox){
+  new MutationObserver(syncTableLabels).observe(sxllBox,{childList:true});
+}
+if(btnCard&&sxlCard){
+  btnCard.addEventListener('click',()=>{
+    syncTableLabels();
+    const on=sxlCard.classList.toggle('card-view');
+    btnCard.classList.toggle('active',on);
+    btnCard.textContent=on?'📋 Jadval ko\'rinish':'📱 Karta ko\'rinish';
+  });
+}
+if(btnLg&&sxlCard){
+  btnLg.addEventListener('click',()=>{
+    const on=sxlCard.classList.toggle('lg-text');
+    btnLg.classList.toggle('active',on);
+    btnLg.textContent=on?'🔍 Oddiy o\'lcham':'🔍 Yirik yozuv';
+  });
+}
+if(btnFs&&sxlCard){
+  btnFs.addEventListener('click',()=>{
+    const on=sxlCard.classList.toggle('fullscreen');
+    btnFs.classList.toggle('active',on);
+    btnFs.textContent=on?'✕ Kichraytirish':'⛶ To\'liq ekran';
+    document.body.style.overflow=on?'hidden':'';
+  });
+}
+
+// Theme Switcher (Dark / Light)
+const themeBtn=$('themeBtn'),themeIco=$('themeIco'),themeTxt=$('themeTxt');
+if(themeBtn){
+  themeBtn.addEventListener('click',()=>{
+    const root=document.documentElement;
+    const isLight=root.getAttribute('data-theme')==='light';
+    const next=isLight?'dark':'light';
+    root.setAttribute('data-theme',next);
+    themeIco.textContent=next==='light'?'☀️':'🌙';
+    themeTxt.textContent=next==='light'?'Kun':'Tun';
+  });
+}
+
+// Drag and Drop support on upload zone
+const dz=$('dropZone'),fi=$('sxf');
+if(dz&&fi){
+  ['dragenter','dragover'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.add('dragover')}));
+  ['dragleave','drop'].forEach(ev=>dz.addEventListener(ev,e=>{e.preventDefault();dz.classList.remove('dragover')}));
+  dz.addEventListener('drop',e=>{
+    if(e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files.length){
+      fi.files=e.dataTransfer.files;
+      fi.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+  });
+}
+})();
+</script>
+
+<!-- Month & Sheet Generation Logic (Unchanged Internal Mechanics) -->
+<script>
+const UZM=['Yanvar','Fevral','Mart','Aprel','May','Iyun','Iyul','Avgust','Sentabr','Oktabr','Noyabr','Dekabr'];
+const MV=['январь янв январ yanvar yan','февраль фев fevral fev феврал','март мар mart','апрель апр aprel апрел','май may','июнь июн iyun','июль июл iyul','август авг avgust','сентябрь сент sentabr sent сентябр sentyabr','октябрь окт oktabr okt октябр oktyabr','ноябрь нояб noyabr noy ноябр','декабрь дек dekabr dek декабр'];
+let MM=null;
+function mmap(){if(MM)return MM;MM=new Map();MV.forEach((l,i)=>l.split(' ').forEach(w=>MM.set(window.__sk(w),i+1)));return MM}
+function mTok(str){const m=mmap();for(const t of window.__sk(String(str)).split(' '))if(m.has(t))return m.get(t);return 0}
+const mkMo=(y,n)=>({k:(y?y+'-':'')+String(n).padStart(2,'0'),label:UZM[n-1]+(y?' '+y:'')});
+function mVal(v){
+  if(v instanceof Date)return mkMo(v.getUTCFullYear(),v.getUTCMonth()+1);
+  if(v==null||v==='')return null;
+  const t=String(v);let m=t.match(/(\d{4})-(\d{1,2})-\d{1,2}/);if(m&&+m[2]>=1&&+m[2]<=12)return mkMo(+m[1],+m[2]);
+  m=t.match(/\d{1,2}[.\/-](\d{1,2})[.\/-](\d{4})/);if(m&&+m[1]>=1&&+m[1]<=12)return mkMo(+m[2],+m[1]);
+  const n=mTok(t);return n?mkMo(0,n):null;
+}
+function monthOf(a,hd,src){
+  const dc=hd.map((h,i)=>/дата|время|зафикс|sana|vaqt|месяц|date|time|^oy$/i.test(h)?i:-1).filter(i=>i>=0);
+  for(const i of dc){const r=mVal(a[i]);if(r)return r}
+  for(const v of a){if(v instanceof Date)return mVal(v)}
+  const n=mTok(String(src||'').replace(/\.(?:xlsx?|pdf)$/i,''));
+  return n?mkMo(0,n):{k:'~',label:'Aniqlanmadi'};
+}
+function monthGroups(items){
+  const g=new Map();items.forEach(o=>{const m=o.mo;if(!g.has(m.k))g.set(m.k,{k:m.k,label:m.label,n:0});g.get(m.k).n++});
+  return [...g.values()].sort((a,b)=>a.k<b.k?-1:a.k>b.k?1:0);
+}
+function addSheet(wb,name,hd,rs,wd){
+  const ws=wb.addWorksheet(name),n=hd.length;
+  ws.columns=wd.map(w=>({width:w}));ws.addRow(hd);rs.forEach(r=>ws.addRow(r));
+  const sd={style:'thin',color:{argb:'FFBFBFBF'}},bd={left:sd,right:sd,top:sd,bottom:sd};
+  ws.eachRow((row,rn)=>{let lines=1;
+    for(let i=1;i<=n;i++){const c=row.getCell(i);c.border=bd;
+      if(rn===1){c.font={name:'Arial',size:9,bold:true,color:{argb:'FFFFFFFF'}};c.fill={type:'pattern',pattern:'solid',fgColor:{argb:'FF305496'}};c.alignment={horizontal:'center',vertical:'middle',wrapText:true}}
+      else{c.font={name:'Arial',size:9};c.alignment={vertical:'top',wrapText:true};if(c.value instanceof Date)c.numFmt='DD.MM.YYYY HH:MM'}
+      const v=c.value;if(v==null)continue;const s=v instanceof Date?fmt(v):String(v);const cap=Math.max(1,wd[i-1]-1);
+      lines=Math.max(lines,s.split('\n').reduce((a,p)=>a+Math.max(1,Math.ceil(p.length/cap)),0))}
+    row.height=Math.max(15,lines*12+3)});
+  ws.views=[{state:'frozen',ySplit:1}];ws.autoFilter={from:{row:1,column:1},to:{row:ws.rowCount,column:n}};
+  ws.pageSetup={paperSize:9,orientation:'landscape',fitToPage:true,fitToWidth:1,fitToHeight:0,horizontalCentered:true,printTitlesRow:'1:1',margins:{left:.4,right:.4,top:.5,bottom:.6,header:.3,footer:.3}};
+  ws.pageSetup.printArea='A1:'+ws.getColumn(n).letter+ws.rowCount;ws.headerFooter={oddFooter:'&C&P / &N'};
+}
+function sheetsFor(wb,rows,hd,wd,base,getMo,splitId){
+  const clean=s=>String(s).replace(/[\\\/?*\[\]:]/g,'').slice(0,31)||'Sheet';
+  if(!document.getElementById(splitId).checked){addSheet(wb,clean(base),hd,rows,wd);return}
+  const g=new Map();rows.forEach(r=>{const m=getMo(r);if(!g.has(m.k))g.set(m.k,{m,rs:[]});g.get(m.k).rs.push(r)});
+  const used=new Set();
+  [...g.values()].sort((a,b)=>a.m.k<b.m.k?-1:1).forEach(({m,rs})=>{let n=clean(m.label),i=2;while(used.has(n))n=clean(m.label).slice(0,28)+' '+i++;used.add(n);addSheet(wb,n,hd,rs,wd)});
+}
+document.addEventListener('change',e=>{const l=e.target.closest&&e.target.closest('label.chip');if(l&&/split$/.test(e.target.id||''))l.classList.toggle('on',e.target.checked)});
+</script>
+
+<!-- District Detection Logic (Unchanged Internal Mechanics) -->
+<script>(()=>{
+const D=[['Bektemir tumani','bektemir'],['Chilonzor tumani','chilonz'],['Mirobod tumani','mirobod'],['Mirzo Ulug‘bek tumani','ulugbek'],['Olmazor tumani','olmoz'],['Sergeli tumani','sergeli'],['Shayxontohur tumani','shoyhont'],['Uchtepa tumani','uchtep'],['Yakkasaroy tumani','yokkosor'],['Yangihayot tumani','yongihoyo'],['Yunusobod tumani','yunusob'],['Yashnobod tumani','yoshnob']];
+const CY={а:'a',б:'b',в:'v',г:'g',д:'d',е:'e',ё:'yo',ж:'j',з:'z',и:'i',й:'y',к:'k',л:'l',м:'m',н:'n',о:'o',п:'p',р:'r',с:'s',т:'t',у:'u',ф:'f',х:'h',ц:'s',ч:'ch',ш:'sh',щ:'sh',ы:'i',э:'e',ю:'yu',я:'ya',ў:'u',қ:'k',ғ:'g',ҳ:'h',ө:'u',ү:'u'};
+function sk(s){s=String(s).toLowerCase().replace(/[ʻʼ'`‘’ъь]/g,'');let o='';for(const c of s)o+=CY[c]!==undefined?CY[c]:c;
+ return o.replace(/x/g,'h').replace(/q/g,'k').replace(/w/g,'v').replace(/a/g,'o').replace(/[^a-z0-9]+/g,' ').trim()}
+window.__sk=sk;
+window.__detect=txt=>{const t=' '+sk(txt);return D.filter(([n,st])=>t.includes(' '+st)).map(x=>x[0])};
+})();
+</script>
+
+<!-- Main Filter & Export Controller (Unchanged Core Logic + Workflow Step Highlight) -->
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const rg=h=>/туман|район|tuman|district|дислок|rayon|р-н/i.test(h),ag=h=>/адрес|manzil|address|объект|наименован|мфй|махалла|улица|куча/i.test(h);
+const OH=['Устройства','Дата аварии','Объект','Адрес'],OS=['Карточка','Зафиксировано','Наименование объекта','Адрес'],OW=[12,16,34,52];
+let head=[],rawHead=[],rows=[],cols=new Set(),out=null;
+const sD=new Set(),sM=new Set(),sS=new Set(),sO=new Set();
+const CARDS=['sxc','sxd','sxm','sxs','sxo','sxl','sxr'];
+const say=(t,c)=>{const m=$('sxmsg');m.textContent=t;m.className=c||''};
+const txt=v=>v==null?'':(v instanceof Date?'':String(v));
+const aD=()=>rows.filter(r=>!sD.size||sD.has(r.k));
+const aM=()=>aD().filter(r=>!sM.size||sM.has(kM(r)));
+const aS=()=>aM().filter(r=>!sS.size||sS.has(kS(r)));
+const pick=()=>aS().filter(r=>!sO.size||sO.has(r.mo.k));
+
+function setNavStep(stepNum){
+  document.querySelectorAll('#workflowSteps .nav-step').forEach(el=>{
+    el.classList.toggle('active', +el.dataset.step <= stepNum);
+  });
+}
+
+function classify(){
+  const sel=[...cols],g1=sel.filter(i=>rg(head[i])),g2=sel.filter(i=>!rg(head[i])&&ag(head[i])),g3=sel.filter(i=>!rg(head[i])&&!ag(head[i]));
+  rows.forEach(r=>{
+    r.k='NA';r.lab='Aniqlanmadi';
+    for(const g of [g1,g2,g3]){
+      const hit=new Set();g.forEach(i=>window.__detect(txt(r.a[i])).forEach(x=>hit.add(x)));
+      if(hit.size===1){r.k=[...hit][0];r.lab=r.k;break}
+      if(hit.size>1){r.k='AMB';r.lab='Tekshirish kerak: '+[...hit].join(' / ');break}
+    }
+  });
+}
+function chip(box,label,on,fn){const l=document.createElement('label');l.className='chip'+(on?' on':'');
+  l.innerHTML='<input type="checkbox"><span></span>';l.children[1].textContent=label;
+  const cb=l.firstChild;cb.checked=on;cb.onchange=()=>{l.classList.toggle('on',cb.checked);fn(cb.checked)};box.appendChild(l)}
+function rC(){const b=$('sxbc');b.innerHTML='';head.forEach((h,i)=>chip(b,h||('Ustun '+(i+1)),cols.has(i),on=>{on?cols.add(i):cols.delete(i);sD.clear();sM.clear();sS.clear();sO.clear();classify();rD();rM();rS();dirty()}))}
+function rD(){
+  const cnt={};rows.forEach(r=>cnt[r.k]=(cnt[r.k]||0)+1);
+  const rk=k=>k==='NA'?2:k==='AMB'?1:0;
+  const ks=Object.keys(cnt).sort((a,b)=>rk(a)-rk(b)||a.localeCompare(b));
+  chips($('sxbd'),ks.map(k=>({k,n:cnt[k],label:k==='NA'?'Aniqlanmadi':k==='AMB'?'Tekshirish uchun (noaniq)':k})),sD,()=>{rM();rS();dirty()});
+}
+function rM(){
+  const q=window.__sk($('sxqm').value),g=groups(aD(),kM,o=>o.m.mfy);
+  [...sM].forEach(k=>{if(!g.some(x=>x.k===k))sM.delete(k)});
+  chips($('sxbm'),g.filter(x=>window.__sk(x.label).includes(q)),sM,()=>{rS();dirty()});
+}
+function rS(){
+  const q=window.__sk($('sxqs').value),g=groups(aM(),kS,o=>o.m.st);
+  [...sS].forEach(k=>{if(!g.some(x=>x.k===k))sS.delete(k)});
+  chips($('sxbs'),g.filter(x=>window.__sk(x.label).includes(q)),sS,dirty);
+}
+function rO(){const g=monthGroups(aS());[...sO].forEach(k=>{if(!g.some(x=>x.k===k))sO.delete(k)});chips($('sxbo'),g,sO,upd)}
+function data(){
+  const r0=pick(),ti=head.indexOf('Зафиксировано');
+  if(ti>=0)r0.sort((x,y)=>(x.a[ti] instanceof Date?x.a[ti]:0)-(y.a[ti] instanceof Date?y.a[ti]:0));
+  const hd=rawHead,rs=r0.map(r=>{const x=r.raw.slice();x.__mo=r.mo;return x});
+  const wd=hd.map((h,i)=>{let m=String(h).length;rs.slice(0,200).forEach(r=>{const v=r[i];if(v!=null){const s=v instanceof Date?fmt(v):String(v);m=Math.max(m,Math.min(s.length,60))}});return Math.min(40,Math.max(9,Math.ceil(m*.9)+2))});
+  return {hd,wd,rs};
+}
+function dirty(){rO();upd()}
+function upd(){out=null;$('sxsv').classList.add('hide');const d=data();$('sxcnt').textContent='Tanlandi: '+d.rs.length+' ta yozuv (jami '+rows.length+' tadan)';renderList('sxll',d.hd,d.rs)}
+const clr=(s,f)=>()=>{s.clear();f();rM();rS();dirty()};
+$('sxdb').onclick=()=>{sD.clear();rD();rM();rS();dirty()};
+$('sxmb').onclick=()=>{sM.clear();rM();rS();dirty()};
+$('sxsb').onclick=()=>{sS.clear();rS();dirty()};
+$('sxob').onclick=()=>{sO.clear();rO();upd()};
+$('sxqm').addEventListener('input',rM);$('sxqs').addEventListener('input',rS);
+$('sxf').addEventListener('change',async e=>{
+  const all=[...e.target.files],files=all.slice(0,10);if(!files.length)return;
+  const hasPdf=files.some(f=>/\.pdf$/i.test(f.name)||f.type==='application/pdf');
+  $('sxfn').textContent=files.map(f=>f.name).join(', ')+(hasPdf?' (PDF ➔ Excel formatga o\'girildi)':'');
+  const pdfBar=$('pdfConvBar');
+  if(pdfBar)pdfBar.classList.toggle('hide',!hasPdf);
+  CARDS.forEach(i=>$(i).classList.add('hide'));
+  try{
+    await window.__libs;
+    const R=await readMany(files);head=R.head;
+    window.__lastRead={R,names:files.map(f=>f.name)};
+    const ai=head.indexOf('Адрес');
+    rawHead=R.rawHead;
+    rows=R.rows.map((a,i)=>({a,raw:R.rawRows[i],m:parse(ai>=0?a[ai]:''),mo:monthOf(a,head,R.src[i])}));
+    const auto=head.map((h,i)=>(rg(h)||ag(h))?i:-1).filter(i=>i>=0);
+    cols=new Set(auto.length?auto:head.map((_,i)=>i));
+    sD.clear();sM.clear();sS.clear();sO.clear();
+    $('sxqm').value='';$('sxqs').value='';
+    classify();rC();rD();rM();rS();dirty();
+    document.body.classList.add('file-loaded');
+    CARDS.forEach((id,idx)=>{
+      const el=$(id);
+      el.style.animationDelay=(idx*0.07)+'s';
+      el.classList.remove('hide');
+    });
+    setNavStep(2);
+    setTimeout(()=>{
+      const nextEl=$('sxd')||$('sxc');
+      if(nextEl)window.scrollTo({top:0,behavior:'smooth'});
+    },80);
+    const na=rows.filter(r=>r.k==='NA').length,am=rows.filter(r=>r.k==='AMB').length;
+    say('Jami '+rows.length+' qator ('+files.length+' ta fayl'+(all.length>10?', faqat birinchi 10 tasi olindi':'')+'). Aniqlanmagan tuman: '+na+', noaniq: '+am+'.'+(R.dup?' Takrorlangan '+R.dup+' ta qator olib tashlandi.':''),'ok');
+    document.dispatchEvent(new CustomEvent('hudud:fileread'));
+  }catch(err){say('Faylni o\'qib bo\'lmadi: '+err.message,'er')}
+});
+const fname=n=>(sD.size===1?[...sD][0].replace(/[^\p{L}\p{N}]+/gu,'_'):'Natija')+'_'+n+'.xlsx';
+$('sxgo').addEventListener('click',async()=>{
+  const {hd,wd,rs}=data();if(!rs.length){say('Yozuv tanlanmadi.','er');return}
+  $('sxgo').disabled=true;say('Tayyorlanmoqda...');
+  try{
+    await window.__libs;
+    const wb=new ExcelJS.Workbook();sheetsFor(wb,rs,hd,wd,'Natija',r=>r.__mo,'sxsplit');
+    out={name:fname(rs.length),blob:new Blob([await wb.xlsx.writeBuffer()]),n:rs.length};
+    setNavStep(3);
+    say(rs.length+' ta yozuv tayyor — yuklab olinmoqda: '+out.name,'ok');
+    await saveOut();
+  }catch(err){say('Xato: '+(err.message||err.code),'er')}finally{$('sxgo').disabled=false}
+});
+$('sxsv').addEventListener('click',()=>saveOut());
+async function saveOut(){
+  if(!out)return;
+  try{
+    const dl=(typeof claude!=='undefined'&&claude.use)?await claude.use('downloads'):null;
+    if(!dl){const a=document.createElement('a');a.href=URL.createObjectURL(out.blob);a.download=out.name;document.body.appendChild(a);a.click();a.remove();say(out.n+' ta yozuv yuklab olindi (Yuklamalar papkasini tekshiring).','ok');return}
+    await dl.save({filename:out.name,data:out.blob});say(out.n+' ta yozuv saqlandi.','ok');
+  }catch(err){if(err&&err.code==='declined')say('Bekor qilindi.');else say('Saqlashda xato: '+(err.code||'')+' '+(err.message||''),'er')}
+}
+$('sxpdf').addEventListener('click',()=>{
+  const {hd,wd,rs}=data();if(!rs.length){say('Yozuv tanlanmadi.','er');return}
+  const tot=wd.reduce((a,b)=>a+b,0);
+  let h='<table><colgroup>'+wd.map(w=>'<col style="width:'+(w/tot*100).toFixed(2)+'%">').join('')+'</colgroup><thead><tr>'+hd.map(x=>'<th>'+esc(x)+'</th>').join('')+'</tr></thead><tbody>';
+  rs.forEach(r=>{h+='<tr>'+r.map(v=>'<td>'+(v==null?'':esc(v instanceof Date?fmt(v):v))+'</td>').join('')+'</tr>'});
+  $('pa').innerHTML=h+'</tbody></table>';
+  setNavStep(3);
+  say('Chop etish oynasida "PDF sifatida saqlash" ni tanlang (A4, albom).','ok');
+  try{window.print()}catch(e){say('Bu oynada chop etish ishlamadi. Faylni Chrome da oching.','er')}
+});
+
+if($('btnDlRawExcel')){
+  $('btnDlRawExcel').addEventListener('click',async()=>{
+    try{
+      let wb=window.__convertedPdfWb;
+      if(!wb&&window.__lastPdfMatrix&&typeof ExcelJS!=='undefined'){
+        wb=new ExcelJS.Workbook();
+        const hd=window.__lastPdfMatrix[0],rs=window.__lastPdfMatrix.slice(1);
+        const wd=hd.map((h,i)=>{let m=String(h).length;rs.slice(0,200).forEach(r=>{const v=r[i];if(v!=null)m=Math.max(m,Math.min(String(v).length,60))});return Math.min(45,Math.max(10,Math.ceil(m*.9)+2))});
+        addSheet(wb,'PDF_Excel',hd,rs,wd);
+      }
+      if(!wb)return;
+      const blob=new Blob([await wb.xlsx.writeBuffer()]);
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download=window.__lastPdfName||'PDF_Excel.xlsx';
+      document.body.appendChild(a);a.click();a.remove();
+      say('PDFdan o\'girilgan to\'liq Excel fayl yuklab olindi!','ok');
+    }catch(err){say('Excel saqlashda xato: '+err.message,'er')}
+  });
+}
+// Shared cloud dataset: load a published dataset exactly like a freshly read file
+function applyDataset(R){
+  head=R.head||[];
+  const ai=head.indexOf('Адрес');
+  rawHead=(R.rawHead&&R.rawHead.length)?R.rawHead:head;
+  const rr=(R.rawRows&&R.rawRows.length===R.rows.length)?R.rawRows:R.rows;
+  rows=R.rows.map((a,i)=>({a,raw:rr[i],m:parse(ai>=0?a[ai]:''),mo:monthOf(a,head,(R.src||[])[i]||'')}));
+  const auto=head.map((h,i)=>(rg(h)||ag(h))?i:-1).filter(i=>i>=0);
+  const saved=Array.isArray(R.cols)?R.cols.filter(i=>i>=0&&i<head.length):[];
+  cols=new Set(saved.length?saved:auto.length?auto:head.map((_,i)=>i));
+  sD.clear();sM.clear();sS.clear();sO.clear();
+  $('sxqm').value='';$('sxqs').value='';
+  classify();
+  restoreSel();
+  rC();rD();rM();rS();dirty();
+  document.body.classList.add('file-loaded');
+  CARDS.forEach((id,idx)=>{const el=$(id);el.style.animationDelay=(idx*0.07)+'s';el.classList.remove('hide')});
+  setNavStep(2);
+}
+// "Tanlovni saqlash": district + MFY selection kept per device in localStorage.
+// Re-applied every time a dataset loads, so new admin uploads show fresh counts for the same choice.
+const SEL_KEY='hudud-saved-selection';
+function loadSel(){try{const o=JSON.parse(localStorage.getItem(SEL_KEY)||'null');return o&&Array.isArray(o.d)&&Array.isArray(o.m)?o:null}catch(e){return null}}
+function restoreSel(){
+  const o=loadSel();if(!o)return;
+  const ks=new Set(rows.map(r=>r.k));
+  o.d.forEach(k=>{if(ks.has(k))sD.add(k)});
+  const ms=new Set(aD().map(kM));
+  o.m.forEach(k=>{if(ms.has(k))sM.add(k)});
+}
+let selT=null;
+function selToast(t,warn){
+  let el=$('selToast');
+  if(!el){el=document.createElement('div');el.id='selToast';el.setAttribute('role','status');el.setAttribute('aria-live','polite');document.body.appendChild(el)}
+  el.textContent=t;el.classList.toggle('warn',!!warn);el.classList.add('show');
+  clearTimeout(selT);selT=setTimeout(()=>el.classList.remove('show'),2400);
+}
+$('saveSelBtn').addEventListener('click',()=>{
+  if(!rows.length){selToast("Avval tuman yoki mahallani tanlang",true);return}
+  try{
+    if(!sD.size&&!sM.size){localStorage.removeItem(SEL_KEY);selToast('Tanlov tozalandi — barcha hududlar ko\'rsatiladi');return}
+    localStorage.setItem(SEL_KEY,JSON.stringify({d:[...sD],m:[...sM],t:Date.now()}));
+    selToast('✅ Muvaffaqiyatli saqlandi!');
+  }catch(e){selToast("Saqlab bo'lmadi: brauzer xotirasi yopiq",true)}
+});
+window.__hudud={applyDataset,getCols:()=>[...cols].sort((a,b)=>a-b),rowCount:()=>rows.length};
+
+if($('pdfModeSel')){
+  $('pdfModeSel').addEventListener('change',()=>{
+    const inp=$('sxf');
+    if(inp&&inp.files&&inp.files.length){
+      inp.dispatchEvent(new Event('change',{bubbles:true}));
+    }
+  });
+}
+
+})();
+</script>
+<!-- Shared Cloud Database: separate report files (up to 4 slots) + Admin slot manager (Netlify Functions + Blobs + Local/Offline Fallback) -->
+<script>
+(()=>{
+const $=id=>document.getElementById(id);
+const API='/api/dataset';
+const PW_KEY='hudud_admin_pw';
+const LOCAL_DB_NAME='hudud_local_db_v1';
+const DEFAULT_PIN='';
+const MAX_BODY=5.8*1024*1024;
+const SLOTS=4;
+const VIEW=['sxc','sxd','sxm','sxs','sxo','sxl','sxr'];
+const sGet=k=>{try{return sessionStorage.getItem(k)||''}catch(e){return ''}};
+const sSet=(k,v)=>{try{sessionStorage.setItem(k,v)}catch(e){}};
+const sDel=k=>{try{sessionStorage.removeItem(k)}catch(e){}};
+let pw=sGet(PW_KEY);
+let slots=Array(SLOTS).fill(null),active=-1,target=null,seq=0,localMode=false;
+const cache={},errs={};
+
+// In-page confirmation modal (replaces blocked window.confirm)
+function askConfirm(msg){
+  return new Promise(resolve=>{
+    const m=$('confirmModal'),txt=$('cfmText'),yes=$('cfmYes');
+    if(!m||!txt||!yes){resolve(true);return}
+    txt.textContent=msg;
+    m.classList.remove('hide');
+    const done=val=>{
+      m.classList.add('hide');
+      yes.removeEventListener('click',onYes);
+      m.querySelectorAll('[data-cfm-cancel]').forEach(el=>el.removeEventListener('click',onNo));
+      resolve(val);
+    };
+    const onYes=()=>done(true),onNo=()=>done(false);
+    yes.addEventListener('click',onYes);
+    m.querySelectorAll('[data-cfm-cancel]').forEach(el=>el.addEventListener('click',onNo));
+  });
+}
+
+// Built-in starter sample dataset for local/preview mode when no server or uploaded file exists yet
+function getSampleDataset(){
+  const head=['Карточка','Зафиксировано','Наименование объекта','Туман дислокацияси','Адрес','Информация','Телефон'];
+  const rawRows=[
+    ['10451',new Date(Date.UTC(2026,10,10,8,30)).getTime(),'Аholi xonadoni','Mirzo Ulug‘bek tumani','Mirzo Ulug‘bek tumani, Oqqo‘rg‘on MFY, Mustaqillik ko‘chasi, 14-uy','Rejali profilaktika ko‘rigi','+998 90 123-45-67'],
+    ['10452',new Date(Date.UTC(2026,10,10,9,15)).getTime(),'Savdo do‘koni','Yunusobod tumani','Yunusobod tumani, Bodomzor MFY, Amir Temur ko‘chasi, 108-uy','Hisoblagich ko‘rsatkichi tekshirildi','+998 93 555-11-22'],
+    ['10453',new Date(Date.UTC(2026,10,11,10,40)).getTime(),'Ko‘p qavatli uy','Chilonzor tumani','Chilonzor tumani, Qatortol MFY, Cho‘ponota ko‘chasi, 25-uy','Bosim me’yorida','+998 97 700-88-99'],
+    ['10454',new Date(Date.UTC(2026,10,11,14,20)).getTime(),'Maktabgacha ta’lim','Mirzo Ulug‘bek tumani','Mirzo Ulug‘bek tumani, Darxon MFY, Hamid Olimjon ko‘chasi, 7-uy','Texnik xizmat ko‘rsatildi','+998 99 811-22-33'],
+    ['10455',new Date(Date.UTC(2026,9,24,11,10)).getTime(),'Aholi xonadoni','Yakkasaroy tumani','Yakkasaroy tumani, Qushbegi MFY, Bobur ko‘chasi, 42-uy','Uskuna soz holatda','+998 90 999-00-11'],
+    ['10456',new Date(Date.UTC(2026,9,25,16,5)).getTime(),'Xizmat ko‘rsatish shoxobchasi','Sergeli tumani','Sergeli tumani, Yangi Sergeli MFY, Lutfikor ko‘chasi, 19-uy','Ma’lumot yangilandi','+998 94 600-33-44'],
+    ['10457',new Date(Date.UTC(2026,10,12,13,0)).getTime(),'Aholi xonadoni','Olmazor tumani','Olmazor tumani, Sebzor MFY, Qorasaroy ko‘chasi, 63-uy','Nazorat tekshiruvi yakunlandi','+998 91 111-22-44'],
+    ['10458',new Date(Date.UTC(2026,10,13,9,50)).getTime(),'Oziq-ovqat do‘koni','Yashnobod tumani','Yashnobod tumani, Aviasozlar MFY, Parkent ko‘chasi, 85-uy','Texnik ko‘rikdan o‘tdi','+998 97 444-55-66']
+  ].map(r=>r.map((v,idx)=>idx===1?{$d:v}:v));
+  return {
+    id:'sample-slot-0',
+    slotIndex:0,
+    fileName:'Toshkent_Hududiy_Hisobot_Namuna.xlsx',
+    totalRows:rawRows.length,
+    updatedAt:'2026-11-13T10:00:00.000Z',
+    head,
+    rawHead:head,
+    rows:rawRows,
+    rawRows:rawRows,
+    src:rawRows.map(()=>'Namuna.xlsx'),
+    dup:0,
+    cols:[3,4]
+  };
+}
+
+// Local IndexedDB storage for offline / Canvas / static mode
+function openLocalDB(){
+  return new Promise((ok,no)=>{
+    if(typeof indexedDB==='undefined')return no(new Error('IndexedDB mavjud emas'));
+    const req=indexedDB.open(LOCAL_DB_NAME,1);
+    req.onupgradeneeded=()=>{
+      const db=req.result;
+      if(!db.objectStoreNames.contains('slots'))db.createObjectStore('slots',{keyPath:'slotIndex'});
+    };
+    req.onsuccess=()=>ok(req.result);
+    req.onerror=()=>no(req.error);
+  });
+}
+async function localGetSlots(){
+  try{
+    const db=await openLocalDB();
+    const all=await new Promise((ok,no)=>{
+      const tx=db.transaction('slots','readonly').objectStore('slots').getAll();
+      tx.onsuccess=()=>ok(tx.result||[]);
+      tx.onerror=()=>no(tx.error);
+    });
+    const arr=Array(SLOTS).fill(null);
+    all.forEach(item=>{
+      if(item&&item.slotIndex>=0&&item.slotIndex<SLOTS){
+        arr[item.slotIndex]={
+          id:item.id,
+          slotIndex:item.slotIndex,
+          fileName:item.fileName,
+          totalRows:item.totalRows,
+          updatedAt:item.updatedAt
+        };
+      }
+    });
+    if(!arr.some(Boolean)){
+      const sample=getSampleDataset();
+      await localSaveSlot(0,sample);
+      arr[0]={id:sample.id,slotIndex:0,fileName:sample.fileName,totalRows:sample.totalRows,updatedAt:sample.updatedAt};
+    }
+    return arr;
+  }catch(e){
+    const sample=getSampleDataset();
+    cache[sample.id]=Promise.resolve({head:sample.head,rows:decM(sample.rows),rawHead:sample.rawHead,rawRows:decM(sample.rawRows),src:sample.src,dup:0,cols:sample.cols});
+    return [{id:sample.id,slotIndex:0,fileName:sample.fileName,totalRows:sample.totalRows,updatedAt:sample.updatedAt},null,null,null];
+  }
+}
+async function localGetSlotData(slotIdx){
+  const db=await openLocalDB();
+  return new Promise((ok,no)=>{
+    const tx=db.transaction('slots','readonly').objectStore('slots').get(Number(slotIdx));
+    tx.onsuccess=()=>ok(tx.result||null);
+    tx.onerror=()=>no(tx.error);
+  });
+}
+async function localSaveSlot(slotIdx,payload){
+  const id='local-slot-'+slotIdx+'-'+Date.now();
+  const rec={
+    ...payload,
+    id:payload.id||id,
+    slotIndex:Number(slotIdx),
+    updatedAt:payload.uploadedAt||payload.updatedAt||new Date().toISOString()
+  };
+  try{
+    const db=await openLocalDB();
+    await new Promise((ok,no)=>{
+      const tx=db.transaction('slots','readwrite');
+      tx.objectStore('slots').put(rec);
+      tx.oncomplete=()=>ok();
+      tx.onerror=()=>no(tx.error);
+    });
+  }catch(e){}
+  return rec;
+}
+async function localDeleteSlot(slotIdx,delAll){
+  try{
+    const db=await openLocalDB();
+    await new Promise((ok,no)=>{
+      const tx=db.transaction('slots','readwrite');
+      const st=tx.objectStore('slots');
+      if(delAll)st.clear();
+      else st.delete(Number(slotIdx));
+      tx.oncomplete=()=>ok();
+      tx.onerror=()=>no(tx.error);
+    });
+  }catch(e){}
+}
+
+// Date <-> JSON (sana ustunlari Date obyekti sifatida qaytadi)
+const enc=v=>v instanceof Date?(isNaN(v)?null:{$d:v.getTime()}):v;
+const dec=v=>(v&&typeof v==='object'&&'$d' in v)?new Date(v.$d):v;
+const encM=m=>(m||[]).map(r=>(r||[]).map(enc));
+const decM=m=>(m||[]).map(r=>(r||[]).map(dec));
+
+const p2=n=>String(n).padStart(2,'0');
+const day=iso=>{const d=new Date(iso);if(isNaN(d))return '—';return p2(d.getDate())+'.'+p2(d.getMonth()+1)+'.'+d.getFullYear()};
+const when=iso=>{const d=new Date(iso);if(isNaN(d))return '—';return day(iso)+', '+p2(d.getHours())+':'+p2(d.getMinutes())};
+const num=n=>Number(n||0).toLocaleString('ru-RU');
+const badge=t=>{const e=document.createElement('span');e.className='db-time';e.textContent='🕒 Yuklangan vaqti: '+t;return e};
+const admSay=(t,c)=>{const m=$('admMsg');m.textContent=t;m.className=c||''};
+const setSlots=a=>{slots=[...Array(SLOTS)].map((_,i)=>(Array.isArray(a)&&a[i])||null)};
+
+function show(id){['dbLoader','dbFiles','dbEmpty'].forEach(x=>$(x).classList.toggle('hide',x!==id))}
+function renderEmpty(title,sub){
+  $('dbEmptyTitle').textContent=title;
+  $('dbEmptySub').textContent=sub;
+  show('dbEmpty');
+}
+function clearView(){
+  VIEW.forEach(id=>$(id)&&$(id).classList.add('hide'));
+  document.body.classList.remove('file-loaded');
+}
+
+// ---------- User: report file cards ----------
+function renderFiles(){
+  const list=$('dbFileList');
+  if(!slots.some(Boolean)){
+    list.innerHTML='';
+    renderEmpty('Hozircha hisobot fayllari yuklanmagan',"Administrator Excel yoki PDF faylni saytga joylagandan so'ng, fayllar shu yerda avtomatik paydo bo'ladi.");
+    return;
+  }
+  [...list.children].forEach(el=>{if(!slots[+el.dataset.slot])el.remove()});
+  slots.forEach((m,i)=>{
+    if(!m)return;
+    const on=i===active;
+    let b=list.querySelector('.db-file[data-slot="'+i+'"]');
+    if(!b){
+      b=document.createElement('button');b.type='button';b.dataset.slot=i;
+      b.innerHTML='<span class="db-file-ico">📄</span><span class="db-file-txt"><strong></strong><span></span></span>';
+      b.querySelector('.db-file-txt').appendChild(badge(''));
+      b.addEventListener('click',()=>select(i));
+      const next=[...list.children].find(el=>+el.dataset.slot>i);
+      list.insertBefore(b,next||null);
+    }
+    b.className='db-file'+(on?' on':'');
+    b.setAttribute('role','tab');b.setAttribute('aria-selected',on);b.title=m.fileName+' — yangilangan: '+when(m.updatedAt);
+    b.querySelector('strong').textContent=(i+1)+'-fayl: '+m.fileName;
+    b.querySelector('.db-file-txt span').textContent=errs[i]?'⚠️ '+errs[i]:'('+num(m.totalRows)+' ta yozuv | '+day(m.updatedAt)+')'+(on?' ✓ Tanlangan':'');
+    b.querySelector('.db-time').textContent=badge(when(m.updatedAt)).textContent;
+  });
+  show('dbFiles');
+}
+
+async function download(m){
+  if(localMode){
+    const D=await localGetSlotData(m.slotIndex);
+    if(!D||!Array.isArray(D.rows)||!D.rows.length)throw new Error('Fayl lokal bazada topilmadi');
+    return {head:D.head,rows:decM(D.rows),rawHead:D.rawHead,rawRows:decM(D.rawRows),src:D.src,dup:D.dup,cols:D.cols};
+  }
+  const gz='DecompressionStream' in window;
+  const r=await fetch(API+'?slot='+m.slotIndex+(gz?'&format=gz':''),{cache:'no-store'});
+  if(!r.ok)throw new Error('Server javobi: '+r.status);
+  const D=/gzip/i.test(r.headers.get('content-type')||'')
+    ?JSON.parse(await new Response(r.body.pipeThrough(new DecompressionStream('gzip'))).text())
+    :await r.json();
+  if(!D||D.empty||!Array.isArray(D.rows)||!D.rows.length)throw new Error('Fayl bazada topilmadi');
+  return {head:D.head,rows:decM(D.rows),rawHead:D.rawHead,rawRows:decM(D.rawRows),src:D.src,dup:D.dup,cols:D.cols};
+}
+function fileData(m){
+  if(!cache[m.id]){cache[m.id]=download(m);cache[m.id].catch(()=>delete cache[m.id])}
+  return cache[m.id];
+}
+
+async function select(i){
+  const m=slots[i];if(!m)return;
+  const my=++seq,btn=document.querySelector('.db-file[data-slot="'+i+'"]');
+  if(btn)btn.classList.add('busy');
+  try{
+    const R=await fileData(m);
+    if(my!==seq)return;
+    delete errs[i];
+    window.__hudud.applyDataset(R);
+    active=i;
+    dropPending();
+    $('sxfn').textContent='';
+    const bar=$('pdfConvBar');if(bar)bar.classList.add('hide');
+  }catch(err){
+    if(my!==seq)return;
+    errs[i]="Yuklab bo'lmadi: "+(err.message||err);
+  }
+  renderFiles();renderAdminSlots();
+}
+
+async function boot(){
+  show('dbLoader');
+  try{
+    const ac=window.AbortController&&new AbortController(),to=ac&&setTimeout(()=>ac.abort(),6000);
+    const r=await fetch(API,{cache:'no-store',signal:ac?ac.signal:undefined}).finally(()=>clearTimeout(to));
+    if(!r.ok)throw new Error('Server javobi: '+r.status);
+    const ct=r.headers.get('content-type')||'';
+    if(!/json/i.test(ct))throw new Error('Not JSON');
+    localMode=false;
+    setSlots((await r.json()).slots);
+  }catch(_){
+    localMode=true;
+    setSlots(await localGetSlots());
+  }
+  renderAdminSlots();
+  const first=slots.findIndex(Boolean);
+  if(first<0){renderFiles();return}
+  renderFiles();
+  await select(first);
+  await Promise.all(slots.map(m=>m&&fileData(m).catch(()=>{})));
+  setTimeout(()=>{const p=window.__loadLibs&&window.__loadLibs();p&&p.catch(()=>{})},1200);
+}
+$('dbRetry').addEventListener('click',boot);
+if($('restartBtn'))$('restartBtn').addEventListener('click',()=>boot());
+
+// ---------- Admin mode ----------
+function setAdmin(on){
+  document.body.classList.toggle('admin-mode',on);
+  $('adminTxt').textContent=on?'Admin ✓':'Admin';
+  $('adminIco').textContent=on?'🔓':'🔐';
+  $('sxf').multiple=!on;
+  if(!on){sDel(PW_KEY);pw=''}
+}
+
+function renderAdminSlots(){
+  const box=$('admSlots');
+  for(let i=0;i<SLOTS;i++){
+    const m=slots[i];
+    let row=box.querySelector('.adm-slot[data-slot="'+i+'"]');
+    if(!row){
+      row=document.createElement('div');row.dataset.slot=i;
+      row.innerHTML='<span class="adm-slot-no"></span><span class="adm-slot-info"></span><button type="button" class="mini"></button><button type="button" class="alt adm-danger">🗑️ O\'chirish</button>';
+      row.children[2].addEventListener('click',()=>pickFor(i));
+      row.children[3].addEventListener('click',e=>delSlot(i,e.currentTarget));
+      box.appendChild(row);
+    }
+    row.className='adm-slot'+(i===target?' target':'');
+    const [no,info,up,del]=row.children;
+    no.textContent=(i+1)+'-Fayl o\'rni:';
+    info.textContent='';
+    if(m){
+      const b=document.createElement('b');b.textContent=m.fileName;
+      info.append(b,' — '+num(m.totalRows)+' ta yozuv | '+when(m.updatedAt)+(i===active?' (ko\'rsatilmoqda)':''),badge(when(m.updatedAt)));
+    }else info.textContent=i===target&&window.__lastRead?'⏳ Yangi fayl saqlashga tayyor':'Bo\'sh o\'rin';
+    up.textContent=m?'🔄 Almashtirish':'📤 Fayl yuklash';
+    del.style.visibility=m?'':'hidden';
+  }
+}
+
+function pickFor(i){
+  target=i;
+  const f=$('sxf');f.value='';f.click();
+  renderAdminSlots();updPublish();
+}
+function updPublish(){
+  const L=window.__lastRead,btn=$('btnPublish');
+  if(!L||!L.R.rows.length||target==null){btn.classList.add('hide');return}
+  const old=slots[target];
+  btn.textContent='☁️ Ushbu faylni '+(target+1)+'-fayl o\'rniga saytga saqlash'+(old?' (eski «'+old.fileName+'» almashtiriladi)':'');
+  btn.classList.remove('hide');
+}
+function dropPending(){
+  window.__lastRead=null;
+  $('btnPublish').classList.add('hide');
+  $('adminFileInfo').classList.add('hide');
+}
+
+const modal=$('adminModal'),pins=[...modal.querySelectorAll('.pin')];
+function openModal(){
+  pins.forEach(p=>{p.value='';p.classList.remove('filled')});
+  $('admErr').textContent='';
+  modal.classList.remove('hide');
+  setTimeout(()=>pins[0].focus(),60);
+}
+function closeModal(){modal.classList.add('hide')}
+modal.querySelectorAll('[data-close]').forEach(el=>el.addEventListener('click',closeModal));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&!modal.classList.contains('hide'))closeModal()});
+
+pins.forEach((p,i)=>{
+  p.addEventListener('input',()=>{
+    p.value=p.value.replace(/\D/g,'').slice(-1);
+    p.classList.toggle('filled',!!p.value);
+    if(p.value&&i<pins.length-1)pins[i+1].focus();
+    if(pins.every(x=>x.value))login();
+  });
+  p.addEventListener('keydown',e=>{
+    if(e.key==='Backspace'&&!p.value&&i>0){pins[i-1].focus();pins[i-1].value='';pins[i-1].classList.remove('filled')}
+    if(e.key==='Enter')login();
+  });
+  p.addEventListener('paste',e=>{
+    const d=(e.clipboardData.getData('text')||'').replace(/\D/g,'').slice(0,pins.length);
+    if(!d)return;e.preventDefault();
+    pins.forEach((x,k)=>{x.value=d[k]||'';x.classList.toggle('filled',!!x.value)});
+    if(d.length===pins.length)login();else pins[d.length].focus();
+  });
+});
+
+let busy=false;
+async function login(){
+  const code=pins.map(p=>p.value).join('');
+  if(code.length<pins.length){$('admErr').textContent='PIN-kodni to\'liq kiriting';return}
+  if(busy)return;busy=true;$('admGo').disabled=true;$('admErr').textContent='';
+  try{
+    let verified=false;
+    if(!localMode){
+      try{
+        const r=await fetch(API+'?verify=1',{method:'POST',headers:{'X-Admin-Password':code}});
+        if(r.status===401){
+          $('admErr').textContent='❌ PIN-kod noto\'g\'ri. Qaytadan urinib ko\'ring.';
+          const row=$('pinRow');row.classList.remove('shake');void row.offsetWidth;row.classList.add('shake');
+          pins.forEach(p=>{p.value='';p.classList.remove('filled')});pins[0].focus();
+          return;
+        }
+        if(r.ok)verified=true;
+      }catch(_){localMode=true}
+    }
+    if(!verified){
+      if(code!==DEFAULT_PIN){
+        $('admErr').textContent='❌ PIN-kod noto\'g\'ri. Qaytadan urinib ko\'ring.';
+        const row=$('pinRow');row.classList.remove('shake');void row.offsetWidth;row.classList.add('shake');
+        pins.forEach(p=>{p.value='';p.classList.remove('filled')});pins[0].focus();
+        return;
+      }
+    }
+    pw=code;sSet(PW_KEY,code);
+    setAdmin(true);closeModal();renderAdminSlots();
+    admSay('✅ Admin rejimi yoqildi. Kerakli o\'rin (1–4) yonidagi «Fayl yuklash» tugmasini bosing.','ok');
+    setTimeout(()=>$('step1Card').scrollIntoView({behavior:'smooth',block:'center'}),120);
+  }catch(err){$('admErr').textContent='Ulanishda xato: '+(err.message||err)}
+  finally{busy=false;$('admGo').disabled=false}
+}
+$('admGo').addEventListener('click',login);
+$('adminBtn').addEventListener('click',()=>{
+  if(document.body.classList.contains('admin-mode')){$('step1Card').scrollIntoView({behavior:'smooth',block:'center'});return}
+  openModal();
+});
+$('btnExitAdmin').addEventListener('click',()=>{setAdmin(false);boot()});
+
+// File read by admin -> offer saving into the chosen slot
+document.addEventListener('hudud:fileread',()=>{
+  const L=window.__lastRead;if(!L)return;
+  L.at=new Date();
+  if(target==null){const e=slots.findIndex(m=>!m);target=e<0?0:e}
+  active=-1;seq++;
+  const info=$('adminFileInfo');
+  info.textContent='📄 '+L.names.join(', ')+' — '+num(L.R.rows.length)+' ta yozuv o\'qildi'+(L.R.dup?' ('+L.R.dup+' ta takror olib tashlandi)':'')+' → '+(target+1)+'-fayl o\'rni';
+  info.appendChild(badge(when(L.at.toISOString())));
+  info.classList.remove('hide');
+  updPublish();renderAdminSlots();if(slots.some(Boolean))renderFiles();
+  admSay(L.R.rows.length?'Jadvalni pastda tekshiring, so\'ng yashil tugma orqali '+(target+1)+'-fayl o\'rniga saqlang.':'Faylda yozuv topilmadi.',L.R.rows.length?'ok':'er');
+});
+
+async function gzipBody(text){
+  if(!('CompressionStream' in window))return {body:text,type:'application/json'};
+  const buf=await new Response(new Blob([text]).stream().pipeThrough(new CompressionStream('gzip'))).arrayBuffer();
+  return {body:buf,type:'application/gzip'};
+}
+
+async function adminFetch(url,opt){
+  const r=await fetch(url,{...opt,headers:{...(opt.headers||{}),'X-Admin-Password':pw}});
+  const res=await r.json().catch(()=>({}));
+  if(r.status===401){setAdmin(false);throw new Error('Admin paroli eskirgan. Qaytadan kiring.')}
+  if(!r.ok)throw new Error(res.error||('Server javobi: '+r.status));
+  return res;
+}
+
+$('btnPublish').addEventListener('click',async()=>{
+  const L=window.__lastRead;if(!L||!pw||target==null)return;
+  const btn=$('btnPublish'),slot=target;btn.disabled=true;admSay('☁️ '+(slot+1)+'-fayl saqlanmoqda...');
+  try{
+    const R=L.R,cols=window.__hudud.getCols();
+    const payload={slotIndex:slot,head:R.head,rows:encM(R.rows),rawHead:R.rawHead,rawRows:encM(R.rawRows),src:R.src,dup:R.dup,
+      cols,fileName:L.names.join(', '),uploadedAt:(L.at||new Date()).toISOString(),totalRows:R.rows.length};
+    if(localMode){
+      const rec=await localSaveSlot(slot,payload);
+      slots[slot]={id:rec.id,slotIndex:slot,fileName:rec.fileName,totalRows:rec.totalRows,updatedAt:rec.updatedAt};
+      cache[rec.id]=Promise.resolve({head:R.head,rows:R.rows,rawHead:R.rawHead,rawRows:R.rawRows,src:R.src,dup:R.dup,cols});
+    }else{
+      const {body,type}=await gzipBody(JSON.stringify(payload));
+      const size=typeof body==='string'?new Blob([body]).size:body.byteLength;
+      if(size>MAX_BODY)throw new Error('Fayl juda katta ('+(size/1048576).toFixed(1)+' MB siqilgan holda). Faylni bir nechta qismga bo\'lib, alohida o\'rinlarga yuklang.');
+      const res=await adminFetch(API+'?slot='+slot,{method:'POST',headers:{'Content-Type':type},body});
+      setSlots(res.slots);
+      cache[res.id]=Promise.resolve({head:R.head,rows:R.rows,rawHead:R.rawHead,rawRows:R.rawRows,src:R.src,dup:R.dup,cols});
+    }
+    delete errs[slot];
+    active=slot;target=null;dropPending();
+    renderFiles();renderAdminSlots();
+    admSay('✨ '+(slot+1)+'-fayl muvaffaqiyatli saqlandi! Boshqa fayllar o\'z joyida qoldi.','ok');
+  }catch(err){admSay('Saqlashda xato: '+(err.message||err),'er')}
+  finally{btn.disabled=false}
+});
+
+async function afterDelete(){
+  if(slots[active]||(active<0&&window.__lastRead))return renderFiles(),renderAdminSlots();
+  active=-1;
+  const next=slots.findIndex(Boolean);
+  if(next>=0)return select(next);
+  clearView();renderFiles();renderAdminSlots();
+}
+
+async function delSlot(i,btn){
+  const m=slots[i];if(!pw||!m)return;
+  if(!(await askConfirm((i+1)+'-fayl «'+m.fileName+'» ni o\'chirishni tasdiqlaysizmi? Boshqa fayllar o\'chmaydi.')))return;
+  btn.disabled=true;
+  try{
+    if(localMode){
+      await localDeleteSlot(i,false);
+      slots[i]=null;
+    }else{
+      const res=await adminFetch(API+'?slot='+i,{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw,slotIndex:i,id:m.id})});
+      setSlots(res.slots);
+    }
+    delete cache[m.id];delete errs[i];
+    await afterDelete();
+    admSay('🗑️ '+(i+1)+'-fayl o\'chirildi.','ok');
+  }catch(err){admSay('O\'chirishda xato: '+(err.message||err),'er')}
+  finally{btn.disabled=false}
+}
+
+$('btnDelAll').addEventListener('click',async()=>{
+  if(!pw)return;
+  if(!(await askConfirm('BARCHA fayllarni birdaniga o\'chirishni tasdiqlaysizmi? Foydalanuvchilar hech qanday jadvalni ko\'rmay qoladi.')))return;
+  const btn=$('btnDelAll');btn.disabled=true;
+  try{
+    if(localMode){
+      await localDeleteSlot(0,true);
+      setSlots([]);
+    }else{
+      await adminFetch(API+'?all=1',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({password:pw,all:true})});
+      setSlots([]);
+    }
+    Object.keys(cache).forEach(k=>delete cache[k]);Object.keys(errs).forEach(k=>delete errs[k]);
+    await afterDelete();
+    admSay('🗑️ Barcha fayllar o\'chirildi.','ok');
+  }catch(err){admSay('O\'chirishda xato: '+(err.message||err),'er')}
+  finally{btn.disabled=false}
+});
+
+// Quick Excel download from the live preview
+$('btnQuickXlsx').addEventListener('click',()=>$('sxgo').click());
+
+if(pw)setAdmin(true);
+renderAdminSlots();
+if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',boot);else boot();
+})();
+</script>
+<script>
+/* Filter panel: toggle, confirm & close, live summary. Works on top of the existing controller (DOM only). */
+(()=>{
+const $=id=>document.getElementById(id),B=document.body,mq=matchMedia('(max-width: 760px)');
+const panel=$('fltPanel'),tg=$('fltToggle');if(!panel||!tg)return;
+let opened=false;
+function setOpen(on){
+  B.classList.toggle('flt-open',on);B.classList.toggle('flt-sheet',on&&mq.matches);
+  tg.setAttribute('aria-expanded',on?'true':'false');
+  tg.querySelector('.flt-txt').textContent=on?'Filtrlarni yopish':'Filtrlarni ochish';
+}
+function toResults(){
+  const t=$('sxl')&&!$('sxl').classList.contains('hide')?$('sxl'):$('sxr');
+  if(!t)return;
+  setTimeout(()=>{const y=t.getBoundingClientRect().top+scrollY-($('fltBar').offsetHeight+16);scrollTo({top:Math.max(0,y),behavior:'smooth'})},mq.matches?60:20);
+}
+tg.addEventListener('click',()=>{const on=!B.classList.contains('flt-open');setOpen(on);if(on&&!mq.matches)setTimeout(()=>panel.scrollIntoView({behavior:'smooth',block:'start'}),20)});
+$('fltApply').addEventListener('click',()=>{setOpen(false);toResults()});
+$('fltClose').addEventListener('click',()=>setOpen(false));
+$('fltBackdrop').addEventListener('click',()=>setOpen(false));
+document.addEventListener('keydown',e=>{if(e.key==='Escape'&&B.classList.contains('flt-open')&&mq.matches)setOpen(false)});
+(mq.addEventListener?mq.addEventListener('change',()=>setOpen(B.classList.contains('flt-open'))):mq.addListener(()=>setOpen(B.classList.contains('flt-open'))));
+const n=id=>{const b=$(id);return b?b.querySelectorAll('label.chip.on').length:0};
+function sum(){
+  const d=n('sxbd'),m=n('sxbm'),s=n('sxbs'),o=n('sxbo');
+  const c=(($('sxcnt')||{}).textContent||'').match(/(\d+)\s*ta yozuv/);
+  const tags=[['🏙️ Tuman',d],['🏘️ Mahalla',m],['🛣️ Ko\'cha',s],['📅 Oy',o]];
+  const box=$('fltSum');box.textContent='';
+  tags.forEach(([l,v])=>{const e=document.createElement('span');e.className='flt-tag'+(v?' on':'');e.textContent=l+': '+(v||'barchasi');box.appendChild(e)});
+  if(c){const e=document.createElement('span');e.className='flt-tag cnt';e.textContent='📋 '+c[1]+' ta yozuv';box.appendChild(e)}
+  $('fltFootSum').textContent=(c?c[1]+' ta yozuv tanlandi':'')+(d||m?' • '+d+' tuman, '+m+' mahalla':'');
+}
+let q=0;const later=()=>{if(!q)q=requestAnimationFrame(()=>{q=0;sum()})};
+const mo=new MutationObserver(later);
+['sxbd','sxbm','sxbs','sxbo','sxcnt'].forEach(id=>$(id)&&mo.observe($(id),{childList:true,subtree:true,characterData:true,attributes:true,attributeFilter:['class']}));
+// First time data appears: open inline on desktop, keep closed on mobile so the table is visible right away.
+new MutationObserver(()=>{
+  const loaded=B.classList.contains('file-loaded');
+  if(loaded&&!opened){opened=true;setOpen(!mq.matches);sum()}
+  else if(!loaded&&opened){opened=false;setOpen(false)}
+}).observe(B,{attributes:true,attributeFilter:['class']});
+if(B.classList.contains('file-loaded')){opened=true;setOpen(!mq.matches)}
+setOpen(B.classList.contains('flt-open'));sum();
+})();
+</script>
+<script>
+// Keep the browser bar colour in sync with the current theme (light by default).
+(function(){var r=document.documentElement,m=document.querySelector('meta[name="theme-color"]');if(!m)return;
+var u=function(){m.setAttribute('content',r.getAttribute('data-theme')==='dark'?'#060a12':'#eef3ff')};
+u();new MutationObserver(u).observe(r,{attributes:true,attributeFilter:['data-theme']});})();
+// PWA: register the service worker so the app can be installed.
+// Remove the obsolete language preference; saved filters stay available.
+try{localStorage.removeItem('hudud-lang')}catch(_){}
+if('serviceWorker' in navigator&&(location.protocol==='https:'||location.hostname==='localhost')){
+  addEventListener('load',()=>navigator.serviceWorker&&navigator.serviceWorker.register('/sw.js',{scope:'/'}).catch(()=>{}));
+}
+</script>
+
+</body>
+</html>
